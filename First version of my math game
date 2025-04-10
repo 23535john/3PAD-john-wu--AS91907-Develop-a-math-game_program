@@ -1,0 +1,898 @@
+# 3PAD-john-wu--AS91907-Develop-a-math-program
+This is a math game program 
+
+import tkinter as tk
+from Game_core import StartPage, GamePage, LeaderboardPage, PlayerInfoPage, LevelMapPage
+import pygame, os
+
+pygame.mixer.init()
+pygame.mixer.music.load(os.path.join('assets','Sounds','bgm.wav'))
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.5)
+
+class BeatMathApp(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title('SpongeBob Math Adventure')
+        self.geometry('800x700')
+        self.difficulty = 'Easy'
+        self.player_name = ''
+        self.page_history = []
+
+        container = tk.Frame(self)
+        container.pack(fill='both', expand=True)
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        self.frames = {}
+        for PageClass in (StartPage, PlayerInfoPage, LevelMapPage, GamePage, LeaderboardPage):
+            page = PageClass(parent=container, controller=self)
+            self.frames[PageClass.__name__] = page
+            page.grid(row=0, column=0, sticky='nsew')
+
+        self.current_page = None
+        self.show_frame('StartPage')
+
+    def show_frame(self, name):
+        if self.current_page and self.current_page != 'StartPage':
+            self.page_history.append(self.current_page)
+
+        frame = self.frames[name]
+        if name == 'GamePage':
+            if not frame.reset_game():
+                return
+        if name == 'LeaderboardPage':
+            frame.refresh()
+
+        self.current_page = name
+        frame.tkraise()
+
+    def go_back(self):
+        if self.page_history:
+            last_page = self.page_history.pop()
+            self.current_page = last_page
+            self.frames[last_page].tkraise()
+        else:
+            self.show_frame('StartPage')
+
+if __name__ == '__main__':
+    BeatMathApp().mainloop()
+
+
+
+import tkinter as tk
+from tkinter import messagebox
+from utils import ProblemBank, DataManager, SoundManager
+from PIL import Image, ImageTk
+import os
+import random
+import pygame
+
+QUESTIONS_PER_LEVEL = 5
+TIME_PER_QUESTION = 20
+
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        
+        # Set underwater world background
+        self.configure(bg='#88cfff')
+        
+        base_path = os.path.join('assets', 'Images')
+        
+        # Load background image (if available)
+        try:
+            self.bg_img = ImageTk.PhotoImage(Image.open(os.path.join(base_path, 'bg_menu.png')))
+            bg_label = tk.Label(self, image=self.bg_img)
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        except:
+            # Use solid color if no image
+            self.configure(bg='#88cfff')
+        
+        # Title
+        title_label = tk.Label(self, text='SpongeBob Math Adventure', 
+                             font=('Comic Sans MS', 36, 'bold'), 
+                             fg='#FFD700', bg='#88cfff')
+        title_label.place(relx=0.5, rely=0.15, anchor='center')
+        
+        # SpongeBob style buttons
+        button_style = {
+            'font': ('Comic Sans MS', 18),
+            'bg': '#FFD700',
+            'fg': '#000000',
+            'activebackground': '#FFA500',
+            'relief': 'raised',
+            'bd': 3,
+            'padx': 20,
+            'pady': 10
+        }
+        
+        btn_frame = tk.Frame(self, bg='#88cfff')
+        btn_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        start_btn = tk.Button(btn_frame, text='Start Game', **button_style,
+                             command=lambda: controller.show_frame('PlayerInfoPage'))
+        start_btn.pack(pady=15)
+        
+        leaderboard_btn = tk.Button(btn_frame, text='Leaderboard', **button_style,
+                                   command=lambda: controller.show_frame('LeaderboardPage'))
+        leaderboard_btn.pack(pady=15)
+        
+        exit_btn = tk.Button(btn_frame, text='Exit Game', **button_style,
+                            command=controller.quit)
+        exit_btn.pack(pady=15)
+        
+        # Music toggle button
+        music_toggle_btn = tk.Button(self, text='🎵', font=('Arial', 14), bg='#FFD700', fg='black', bd=0,
+                                     command=lambda: controller.frames['GamePage'].sm.toggle_music())
+        music_toggle_btn.place(x=740, y=10)
+        
+        # Add SpongeBob and Patrick characters (using emoji)
+        tk.Label(self, text='🧽', font=('Arial', 48), bg='#88cfff').place(relx=0.2, rely=0.7, anchor='center')
+        tk.Label(self, text='⭐', font=('Arial', 48), bg='#88cfff').place(relx=0.8, rely=0.7, anchor='center')
+        tk.Label(self, text='SpongeBob', font=('Comic Sans MS', 14), bg='#88cfff').place(relx=0.2, rely=0.8, anchor='center')
+        tk.Label(self, text='Patrick', font=('Comic Sans MS', 14), bg='#88cfff').place(relx=0.8, rely=0.8, anchor='center')
+
+
+class GamePage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='white')
+        self.controller = controller
+        self.dm = DataManager()
+        self.sm = SoundManager()
+        self.pb = None
+
+        self.name = ''
+        self.level = 1
+        self.qcount = 0
+        self.score = 0
+        self.lives = 3
+        self.answer = None
+        self.time_left = TIME_PER_QUESTION
+        self.timer_id = None
+        self.flash_id = None
+        self.selected_ingredients = []
+        self.target_burger_layers = 0  # 目标汉堡层数
+        self.animation_id = None
+        self.animation_objects = []  # 存储动画对象
+
+        # 状态栏
+        status = tk.Frame(self, bg='#5a9', height=50)
+        status.pack(side='top', fill='x')
+        
+        self.lbl_lives = tk.Label(status, text='♥' * self.lives, fg='red', bg='#5a9', font=('Comic Sans MS', 16))
+        self.lbl_lives.pack(side='left', padx=10)
+        
+        self.lbl_score = tk.Label(status, text=f'Score: {self.score}', bg='#5a9', fg='yellow', font=('Comic Sans MS', 14))
+        self.lbl_score.pack(side='left', padx=10)
+        
+        level_names = {1: 'Jellyfish Fields', 2: 'Krusty Krab', 3: "Squidward's House"}
+        self.lbl_level = tk.Label(status, text=f'Level: {self.level} - {level_names[self.level]}', 
+                                bg='#5a9', fg='white', font=('Comic Sans MS', 14))
+        self.lbl_level.pack(side='right', padx=10)
+        
+        self.lbl_timer = tk.Label(status, text=f'Time: {self.time_left}', bg='#5a9', fg='white', 
+                                font=('Comic Sans MS', 14))
+        self.lbl_timer.pack(side='right', padx=10)
+        
+        # 添加目标汉堡层数显示
+        self.lbl_target = tk.Label(status, text='Target: 0', bg='#5a9', fg='cyan', 
+                                 font=('Comic Sans MS', 12))
+        self.lbl_target.pack(side='right', padx=10)
+
+        # 题目显示区域
+        question_frame = tk.Frame(self, bg='#e6f7ff', bd=2, relief='groove')
+        question_frame.pack(fill='x', padx=20, pady=15)
+        
+        tk.Label(question_frame, text='📝 Math Problem:', font=('Comic Sans MS', 14), 
+                bg='#e6f7ff').pack(anchor='w', padx=10, pady=5)
+        
+        self.question_label = tk.Label(question_frame, text='', font=('Comic Sans MS', 14), 
+                                     bg='#e6f7ff', wraplength=700, justify='left')
+        self.question_label.pack(fill='x', padx=10, pady=10)
+
+        # 蟹堡王厨房游戏区域
+        kitchen_frame = tk.LabelFrame(self, text='🍔 Krusty Krab Kitchen - Make a Krabby Patty', 
+                                    font=('Comic Sans MS', 14, 'bold'),
+                                    bg='#ffebcc', fg='#8B4513')
+        kitchen_frame.pack(fill='both', padx=20, pady=10, expand=True)
+        
+        # 汉堡展示台 - 改为Canvas以支持动画
+        burger_frame = tk.Frame(kitchen_frame, bg='#ffcc99', height=200)
+        burger_frame.pack(fill='x', padx=10, pady=10)
+        
+        self.burger_canvas = tk.Canvas(burger_frame, width=600, height=180, bg='#ffcc99', highlightthickness=0)
+        self.burger_canvas.pack()
+        self.burger_canvas.create_text(300, 90, text='Start making your Krabby Patty...', 
+                                     font=('Comic Sans MS', 16), fill='gray', tags='burger_text')
+        
+        # 食材选择区
+        ingredients_frame = tk.Frame(kitchen_frame, bg='#ffebcc')
+        ingredients_frame.pack(fill='x', pady=10)
+        
+        tk.Label(ingredients_frame, text='Select Ingredients:', font=('Comic Sans MS', 12), 
+                bg='#ffebcc').pack(side='left', padx=10)
+        
+        self.ingredients = ['🍞', '🥬', '🍅', '🥩', '🧀', '🍍']  # Bread, Lettuce, Tomato, Patty, Cheese, Pineapple
+        
+        self.ingredient_btns = []
+        for emoji in self.ingredients:
+            btn = tk.Button(ingredients_frame, text=emoji, font=('Arial', 20), 
+                           command=lambda e=emoji: self.add_ingredient(e),
+                           bg='white', relief='raised', bd=2, padx=5)
+            btn.pack(side='left', padx=5)
+            self.ingredient_btns.append(btn)
+            
+        # 操作按钮
+        btn_frame = tk.Frame(ingredients_frame, bg='#ffebcc')
+        btn_frame.pack(side='right', padx=10)
+        
+        tk.Button(btn_frame, text='Clear Burger', font=('Comic Sans MS', 10), 
+                 bg='#ff6666', fg='white', command=self.clear_burger).pack(side='left', padx=5)
+        
+        tk.Button(btn_frame, text='Complete Burger', font=('Comic Sans MS', 10), 
+                 bg='#66cc66', fg='white', command=self.submit_burger).pack(side='left', padx=5)
+
+        # 答案输入区
+        answer_frame = tk.Frame(self, bg='white')
+        answer_frame.pack(pady=15)
+        
+        tk.Label(answer_frame, text='Enter Math Answer:', font=('Comic Sans MS', 12), 
+               bg='white').pack(side='left', padx=5)
+        
+        self.answer_entry = tk.Entry(answer_frame, font=('Comic Sans MS', 14), width=15)
+        self.answer_entry.pack(side='left', padx=5)
+        self.answer_entry.bind('<Return>', lambda e: self.submit_answer())
+        
+        tk.Button(answer_frame, text='Submit Answer', font=('Comic Sans MS', 12), 
+                 bg='#5a9', fg='white', command=self.submit_answer).pack(side='left', padx=5)
+
+        # 导航按钮区
+        nav_frame = tk.Frame(self, bg='white')
+        nav_frame.pack(pady=10)
+        
+        button_style = {
+            'font': ('Comic Sans MS', 12),
+            'bg': '#5a9',
+            'fg': 'white',
+            'relief': 'raised',
+            'bd': 2,
+            'padx': 8,
+            'pady': 5
+        }
+        
+        tk.Button(nav_frame, text='⬅ Back', **button_style,
+                  command=controller.go_back).pack(side='left', padx=10)
+        tk.Button(nav_frame, text='🏠 Main Menu', **button_style,
+                  command=lambda: controller.show_frame('StartPage')).pack(side='left', padx=10)
+        
+        # 反馈标签
+        self.feedback_label = tk.Label(self, text='', font=('Comic Sans MS', 16), bg='white')
+        self.feedback_label.pack(pady=10)
+
+    def reset_game(self):
+        self.qcount = 0
+        self.score = 0
+        self.lives = 3
+        self.lbl_score.config(text=f'Score: {self.score}')
+        self.lbl_lives.config(text='♥' * self.lives)
+        self.pb = ProblemBank(getattr(self.controller, 'difficulty', 'Easy'))
+        self.time_left = TIME_PER_QUESTION
+        self.clear_burger()
+        self.next_question()
+        return True
+
+    def next_question(self):
+        if self.timer_id:
+            self.after_cancel(self.timer_id)
+        if self.flash_id:
+            self.after_cancel(self.flash_id)
+        if self.animation_id:
+            self.after_cancel(self.animation_id)
+            self.animation_id = None
+
+        if self.qcount >= QUESTIONS_PER_LEVEL:
+            self.level += 1
+            self.qcount = 0
+            if self.level > 3:
+                self.end_game()
+                return
+
+        prob, ans = self.pb.generate()
+        self.answer = ans
+        self.qcount += 1
+        
+        level_names = {1: 'Jellyfish Fields', 2: 'Krusty Krab', 3: "Squidward's House"}
+        self.lbl_level.config(text=f'Level: {self.level} - {level_names[self.level]} (Q{self.qcount})')
+        
+        self.question_label.config(text=prob)
+        self.feedback_label.config(text='')
+        self.clear_burger()
+
+        # 设置目标汉堡层数
+        if isinstance(self.answer, tuple):
+            # 取第一个答案的绝对值作为目标
+            self.target_burger_layers = abs(round(self.answer[0]))
+        else:
+            self.target_burger_layers = abs(round(self.answer))
+        
+        # 确保目标层数在1-6之间
+        self.target_burger_layers = max(1, min(6, self.target_burger_layers))
+        self.lbl_target.config(text=f'Target: {self.target_burger_layers}')
+        
+        # 设置时间限制
+        self.time_left = TIME_PER_QUESTION
+        self.update_timer()
+
+    def update_timer(self):
+        self.lbl_timer.config(text=f'Time: {self.time_left}')
+        if self.time_left <= 0:
+            self.sm.play_wrong()
+            self.lives -= 1
+            self.lbl_lives.config(text='♥' * self.lives)
+            self.feedback_label.config(text=f'Time up! Correct answer: {self.answer}', fg='red')
+            if self.lives <= 0:
+                self.after(2000, self.end_game)
+                return
+            self.after(2000, self.next_question)
+            return
+        self.time_left -= 1
+        self.timer_id = self.after(1000, self.update_timer)
+
+    def add_ingredient(self, ingredient):
+        if len(self.selected_ingredients) < 6:  # 最多6种食材
+            self.selected_ingredients.append(ingredient)
+            self.animate_ingredient(ingredient, len(self.selected_ingredients))
+    
+    def animate_ingredient(self, ingredient, layer):
+        # 移除提示文字
+        self.burger_canvas.delete('burger_text')
+        
+        # 创建动画对象
+        x = random.randint(150, 450)
+        y = -30
+        size = 40
+        
+        # 创建汉堡层
+        colors = {
+            '🍞': '#F0E68C',  # 面包
+            '🥬': '#32CD32',  # 生菜
+            '🍅': '#FF6347',  # 番茄
+            '🥩': '#8B4513',  # 肉饼
+            '🧀': '#FFD700',  # 奶酪
+            '🍍': '#DAA520'   # 菠萝
+        }
+        
+        color = colors.get(ingredient, '#FFFFFF')
+        rect_id = self.burger_canvas.create_rectangle(x-size/2, y, x+size/2, y+size, 
+                                                    fill=color, outline='black', width=2)
+        text_id = self.burger_canvas.create_text(x, y+size/2, text=ingredient, 
+                                               font=('Arial', 20))
+        
+        # 目标位置（堆叠）
+        target_y = 180 - layer * 20
+        
+        # 动画参数
+        animation_speed = 5
+        self.animation_objects.append({
+            'rect_id': rect_id,
+            'text_id': text_id,
+            'x': x,
+            'y': y,
+            'target_y': target_y,
+            'speed': animation_speed
+        })
+        
+        # 开始动画
+        if not self.animation_id:
+            self.animate_burger()
+
+    def animate_burger(self):
+        items_to_remove = []
+        
+        for i, obj in enumerate(self.animation_objects):
+            if obj['y'] < obj['target_y']:
+                obj['y'] += obj['speed']
+                self.burger_canvas.coords(obj['rect_id'], 
+                                         obj['x']-20, obj['y'], 
+                                         obj['x']+20, obj['y']+40)
+                self.burger_canvas.coords(obj['text_id'], obj['x'], obj['y']+20)
+            else:
+                items_to_remove.append(i)
+        
+        # 移除已完成动画的对象
+        for i in sorted(items_to_remove, reverse=True):
+            self.animation_objects.pop(i)
+        
+        # 继续动画或停止
+        if self.animation_objects:
+            self.animation_id = self.after(20, self.animate_burger)
+        else:
+            self.animation_id = None
+
+    def clear_burger(self):
+        self.selected_ingredients = []
+        self.burger_canvas.delete('all')
+        self.burger_canvas.create_text(300, 90, text='Start making your Krabby Patty...', 
+                                     font=('Comic Sans MS', 16), fill='gray', tags='burger_text')
+        self.animation_objects = []
+        if self.animation_id:
+            self.after_cancel(self.animation_id)
+            self.animation_id = None
+
+    def submit_burger(self):
+        if not self.selected_ingredients:
+            self.feedback_label.config(text='Add at least one ingredient!', fg='orange')
+            return
+            
+        # 检查汉堡层数是否匹配目标
+        current_layers = len(self.selected_ingredients)
+        
+        if current_layers == self.target_burger_layers:
+            burger_score = 50  # 匹配目标层数的奖励分数
+            self.feedback_label.config(text=f'Perfect Krabby Patty! +{burger_score} points', fg='green')
+        else:
+            # 计算与目标层数的差距
+            diff = abs(current_layers - self.target_burger_layers)
+            burger_score = max(0, 30 - diff * 10)  # 最高30分，每差一层扣10分
+            
+            if burger_score > 0:
+                self.feedback_label.config(text=f'Good try! {burger_score} points', fg='orange')
+            else:
+                self.feedback_label.config(text='Wrong number of layers!', fg='red')
+        
+        # 添加分数
+        self.score += burger_score
+        self.lbl_score.config(text=f'Score: {self.score}')
+        
+        # 添加汉堡完成动画
+        self.celebrate_burger()
+        
+        # 清空汉堡并进入下一题
+        self.after(2000, self.clear_burger)
+        self.after(2000, self.next_question)
+
+    def celebrate_burger(self):
+    # 创建庆祝动画
+            for _ in range(20):
+                x = random.randint(100, 500)
+                y = random.randint(50, 150)
+                size = random.randint(5, 15)
+                color = random.choice(['#FFD700', '#FF6347', '#32CD32', '#1E90FF'])
+                star = self.burger_canvas.create_oval(x, y, x+size, y+size, fill=color, outline='')
+                self.burger_canvas.tag_lower(star)  # 放在汉堡后面
+                
+                # 添加动画效果 - 传递颜色参数
+                self.animate_star(star, x, y, size, color)  # 添加 color 参数
+
+    def animate_star(self, star, x, y, size, color):  # 添加 color 参数
+            # 随机移动方向
+            dx = random.uniform(-2, 2)
+            dy = random.uniform(-3, -1)
+            alpha = 1.0
+            
+            def move():
+                nonlocal x, y, dx, dy, alpha
+                # 检查星星是否已被删除
+                if not self.burger_canvas.find_withtag(star):
+                    return
+                    
+                x += dx
+                y += dy
+                dy += 0.1  # 重力效果
+                alpha -= 0.02
+                
+                if alpha <= 0 or y > 200:
+                    self.burger_canvas.delete(star)
+                    return
+                
+                # 修复拼写错误：burger_canvas -> burger_canvas
+                self.burger_canvas.coords(star, x, y, x+size, y+size)
+                self.burger_canvas.itemconfig(star, fill=self.adjust_alpha(color, alpha))
+                self.after(30, move)
+            
+            move()
+
+    def adjust_alpha(self, color, alpha):
+            # 确保颜色值格式正确
+            r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+            r = max(0, min(255, int(r * alpha)))
+            g = max(0, min(255, int(g * alpha)))
+            b = max(0, min(255, int(b * alpha)))
+            # 确保十六进制格式正确（两位）
+            return f'#{r:02X}{g:02X}{b:02X}'
+    def submit_answer(self):
+        user_input = self.answer_entry.get().strip()
+        self.answer_entry.delete(0, 'end')
+        
+        if not user_input:
+            self.feedback_label.config(text='Please enter an answer!', fg='orange')
+            return
+            
+        try:
+            if isinstance(self.answer, tuple):
+                user_vals = set(map(lambda x: round(float(x.strip()), 2), user_input.split(',')))
+                correct = set(map(round, self.answer)) == user_vals
+            else:
+                correct = round(float(user_input), 2) == round(self.answer, 2)
+        except:
+            correct = False
+
+        if correct:
+            self.sm.play_correct()
+            self.score += 100
+            self.lbl_score.config(text=f'Score: {self.score}')
+            self.feedback_label.config(text='Correct answer! +100 points', fg='green')
+        else:
+            self.sm.play_wrong()
+            self.lives -= 1
+            self.lbl_lives.config(text='♥' * self.lives)
+            self.feedback_label.config(text=f'Incorrect! Correct answer: {self.answer}', fg='red')
+            
+        if self.lives <= 0:
+            self.after(2000, self.end_game)
+        else:
+            self.after(2000, self.next_question)
+
+    def end_game(self):
+        self.dm.save_score(self.name, self.score, self.level)
+        self.controller.show_frame('LeaderboardPage')
+
+class PlayerInfoPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='lightyellow')
+        self.controller = controller
+
+        tk.Label(self, text='👤 Krusty Krab Employee Registration', font=('Comic Sans MS', 24, 'bold'), 
+                bg='lightyellow', fg='#8B4513').pack(pady=30)
+
+        self.name_var = tk.StringVar()
+        self.difficulty_var = tk.StringVar(value='Easy')
+
+        tk.Label(self, text='Your Name:', bg='lightyellow', font=('Comic Sans MS', 14)).pack()
+        name_entry = tk.Entry(self, textvariable=self.name_var, font=('Comic Sans MS', 14), width=20)
+        name_entry.pack(pady=5)
+        name_entry.focus()
+
+        tk.Label(self, text='Difficulty Level:', bg='lightyellow', font=('Comic Sans MS', 14)).pack()
+        difficulty_menu = tk.OptionMenu(self, self.difficulty_var, 'Easy', 'Medium', 'Hard')
+        difficulty_menu.config(font=('Comic Sans MS', 12), bg='#FFD700')
+        difficulty_menu.pack(pady=5)
+
+        # SpongeBob style button
+        button_style = {
+            'font': ('Comic Sans MS', 16),
+            'bg': '#FFD700',
+            'fg': '#000000',
+            'activebackground': '#FFA500',
+            'relief': 'raised',
+            'bd': 3,
+            'padx': 15,
+            'pady': 8
+        }
+        
+        next_btn = tk.Button(self, text='Start Work ➡', **button_style,
+                  command=self.on_next)
+        next_btn.pack(pady=20)
+
+        self._add_nav_buttons()
+
+    def _add_nav_buttons(self):
+        nav_frame = tk.Frame(self, bg='lightyellow')
+        nav_frame.pack(pady=5)
+        
+        button_style = {
+            'font': ('Comic Sans MS', 12),
+            'bg': '#5a9',
+            'fg': 'white',
+            'relief': 'raised',
+            'bd': 2,
+            'padx': 8,
+            'pady': 5
+        }
+        
+        tk.Button(nav_frame, text='⬅ Back', **button_style,
+                  command=self.controller.go_back).pack(side='left', padx=10)
+        tk.Button(nav_frame, text='🏠 Main Menu', **button_style,
+                  command=lambda: self.controller.show_frame('StartPage')).pack(side='left', padx=10)
+
+    def on_next(self):
+        name = self.name_var.get().strip()
+        if not name:
+            tk.messagebox.showwarning('Missing Info', 'Please enter your name!')
+            return
+        self.controller.player_name = name
+        self.controller.difficulty = self.difficulty_var.get()
+        self.controller.show_frame('LevelMapPage')
+
+class LevelMapPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='#aaffff')  # Light blue underwater
+        self.controller = controller
+
+        tk.Label(self, text='🗺️ Bikini Bottom Adventure Map', font=('Comic Sans MS', 22, 'bold'), 
+                bg='#aaffff', fg='#006994').pack(pady=20)
+
+        map_frame = tk.Frame(self, bg='#aaffff')
+        map_frame.pack(pady=10)
+
+        # Level descriptions
+        level_descriptions = [
+            "1. Jellyfish Fields\nBasic Arithmetic",
+            "2. Krusty Krab\nMedium Difficulty",
+            "3. Squidward's House\nExpert Challenges"
+        ]
+        
+        level_colors = ['#7ec850', '#ff9966', '#9b59b6']  # Green, Orange, Purple
+        
+        for level in range(1, 4):
+            level_frame = tk.Frame(map_frame, bg='white', bd=2, relief='groove')
+            level_frame.grid(row=0, column=level-1, padx=15, pady=10)
+            
+            tk.Label(level_frame, text=level_descriptions[level-1], 
+                    font=('Comic Sans MS', 12), bg='white').pack(padx=15, pady=10)
+            
+            tk.Button(level_frame, text=f'Enter Level {level}', 
+                     font=('Comic Sans MS', 12), bg=level_colors[level-1], fg='white',
+                     width=12, height=1, bd=0,
+                     command=lambda lv=level: self.start_level(lv)).pack(pady=10)
+
+        # Add underwater decorations
+        tk.Label(self, text='🐠 🐟 🦀 🐚 🌊', font=('Arial', 24), 
+                bg='#aaffff').pack(pady=20)
+
+        self._add_nav_buttons()
+
+    def _add_nav_buttons(self):
+        nav_frame = tk.Frame(self, bg='#aaffff')
+        nav_frame.pack(pady=15)
+        
+        button_style = {
+            'font': ('Comic Sans MS', 12),
+            'bg': '#5a9',
+            'fg': 'white',
+            'relief': 'raised',
+            'bd': 2,
+            'padx': 8,
+            'pady': 5
+        }
+        
+        tk.Button(nav_frame, text='⬅ Back', **button_style,
+                  command=self.controller.go_back).pack(side='left', padx=10)
+        tk.Button(nav_frame, text='🏠 Main Menu', **button_style,
+                  command=lambda: self.controller.show_frame('StartPage')).pack(side='left', padx=10)
+
+    def start_level(self, level):
+        game_page = self.controller.frames['GamePage']
+        game_page.name = self.controller.player_name
+        game_page.level = level
+        game_page.reset_game()
+        self.controller.show_frame('GamePage')
+
+class LeaderboardPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='#f0f8ff')  # Light blue background
+        self.controller = controller
+
+        tk.Label(self, text='🏆 Bikini Bottom Hall of Fame', font=('Comic Sans MS', 22, 'bold'), 
+                bg='#f0f8ff', fg='#006994').pack(pady=20)
+
+        self.board = tk.Frame(self, bg='#f0f8ff')
+        self.board.pack()
+
+        # Column headers
+        header_frame = tk.Frame(self.board, bg='#d3e0ea')
+        header_frame.pack(fill='x', padx=20, pady=5)
+        
+        headers = ['Rank', 'Name', 'Score', 'Level', 'Date']
+        for i, header in enumerate(headers):
+            tk.Label(header_frame, text=header, font=('Comic Sans MS', 12, 'bold'), 
+                    bg='#d3e0ea', width=10).grid(row=0, column=i, padx=2, pady=2)
+
+        # Leaderboard content
+        self.scores_frame = tk.Frame(self.board, bg='#f0f8ff')
+        self.scores_frame.pack(pady=10)
+
+        # Return button
+        button_style = {
+            'font': ('Comic Sans MS', 12),
+            'bg': '#5a9',
+            'fg': 'white',
+            'relief': 'raised',
+            'bd': 2,
+            'padx': 8,
+            'pady': 5
+        }
+        
+        tk.Button(self, text='🏠 Main Menu', **button_style,
+                  command=lambda: controller.show_frame('StartPage')).pack(pady=20)
+        
+        # Add decorations
+        tk.Label(self, text='🌟 🏆 🎖️ 🥇 🥈 🥉', font=('Arial', 24), 
+                bg='#f0f8ff').pack(pady=10)
+
+    def refresh(self):
+        for widget in self.scores_frame.winfo_children():
+            widget.destroy()
+            
+        scores = DataManager().get_scores()
+        
+        if not scores:
+            tk.Label(self.scores_frame, text='No records yet. Be the first!', 
+                    font=('Comic Sans MS', 14), bg='#f0f8ff').pack()
+            return
+        
+        for idx, s in enumerate(scores, 1):
+            score_frame = tk.Frame(self.scores_frame, bg='#e6f7ff' if idx % 2 == 0 else '#f0f8ff')
+            score_frame.pack(fill='x', padx=20, pady=2)
+            
+            tk.Label(score_frame, text=str(idx), font=('Comic Sans MS', 12), 
+                    bg=score_frame['bg'], width=5).pack(side='left', padx=5)
+            tk.Label(score_frame, text=s['name'], font=('Comic Sans MS', 12), 
+                    bg=score_frame['bg'], width=15).pack(side='left', padx=5)
+            tk.Label(score_frame, text=str(s['score']), font=('Comic Sans MS', 12), 
+                    bg=score_frame['bg'], width=10).pack(side='left', padx=5)
+            tk.Label(score_frame, text=str(s['level']), font=('Comic Sans MS', 12), 
+                    bg=score_frame['bg'], width=10).pack(side='left', padx=5)
+            tk.Label(score_frame, text=s['date'], font=('Comic Sans MS', 12), 
+                    bg=score_frame['bg'], width=15).pack(side='left', padx=5)
+
+import random
+import json
+import os
+import time
+import pygame
+
+class ProblemBank:
+    def __init__(self, difficulty='Easy'):
+        self.difficulty = difficulty
+        self.characters = ['SpongeBob', 'Patrick', 'Squidward', 'Mr. Krabs', 'Sandy']
+        self.items = ['Krabby Patty', 'jellyfish', 'bubble', 'net', 'pineapple', 'karate glove', 'treasure', 'kite']
+
+    def generate(self):
+        if self.difficulty == 'Easy':
+            return self._gen_arithmetic()
+        elif self.difficulty == 'Medium':
+            return self._gen_linear()
+        else:
+            return self._gen_quadratic()
+
+    def _gen_arithmetic(self):
+        op = random.choice(['+', '-', '*', '/'])
+        a, b = random.randint(1, 20), random.randint(1, 20)
+        if op == '/':
+            b = random.randint(1, 10)
+            a = b * random.randint(1, 10)
+        ans = {'+':a+b, '-':a-b, '*':a*b, '/':a/b}[op]
+        
+        # 海绵宝宝故事化题目
+        char1 = random.choice(self.characters)
+        char2 = random.choice(self.characters)
+        item = random.choice(self.items)
+        
+        # 添加汉堡层数提示
+        burger_hint = f"\n\n🍔 Make a burger with {abs(round(ans))} layers to earn bonus points!"
+        
+        story = f"{char1} has {a} {item}"
+        story += 's' if a > 1 else ''
+        story += ". "
+        
+        if op == '+':
+            story += f"{char2} gives him {b} more. How many {item}"
+            story += 's' if (a+b) > 1 else ''
+            story += " does he have now?"
+        elif op == '-':
+            story += f"He gives {b} to {char2}. How many {item}"
+            story += 's' if (a-b) > 1 else ''
+            story += " does he have left?"
+        elif op == '*':
+            story += f"Each {item} can be divided into {b} pieces. How many pieces total?"
+        else:  # division
+            story += f"He wants to share them equally among {b} friends. How many {item}"
+            story += 's' if (a/b) > 1 else ''
+            story += " does each friend get?"
+        
+        return story + burger_hint, round(ans, 2)
+
+    def _gen_linear(self):
+        a = random.randint(1, 10)
+        x = random.randint(-10, 10)
+        b = random.randint(-10, 10)
+        c = a * x + b
+        
+        # 海绵宝宝故事化题目
+        char = random.choice(self.characters)
+        item = random.choice(self.items)
+        
+        # 添加汉堡层数提示
+        burger_hint = f"\n\n🍔 Make a burger with {abs(x)} layers to earn bonus points!"
+        
+        story = f"{char} is selling {item}s for ${a} each. "
+        story += f"He made ${c} today but spent ${abs(b)} on supplies this morning. "
+        story += "How many did he sell?"
+        
+        return story + burger_hint, x
+
+    def _gen_quadratic(self):
+        a = random.randint(1, 5)
+        r1 = random.randint(-10, 10)
+        r2 = random.randint(-10, 10)
+        b = -a * (r1 + r2)
+        c = a * r1 * r2
+        
+        # 海绵宝宝故事化题目
+        char = random.choice(self.characters)
+        item = random.choice(self.items)
+        
+        # 添加汉堡层数提示
+        target_layers = abs(r1)
+        burger_hint = f"\n\n🍔 Make a burger with {target_layers} layers to earn bonus points!"
+        
+        story = f"{char} threw a {item} {r1} meters, then {r2} meters. "
+        story += f"The parabola equation is {a}x² + {b}x + {c} = 0. "
+        story += "Find both solutions (comma separated)."
+        
+        return story + burger_hint, (r1, r2)
+
+
+
+class DataManager:
+    def __init__(self, filepath='highscores.json'):
+        self.filepath = filepath
+        if not os.path.exists(self.filepath):
+            with open(self.filepath, 'w') as f:
+                json.dump([], f)
+
+    def save_score(self, name, score, level):
+        if not name or name.isdigit():
+            name = f"Player{random.randint(1000,9999)}"
+        name = name.strip()[:20]
+        with open(self.filepath, 'r') as f:
+            scores = json.load(f)
+        scores.append({
+            'name': name,
+            'score': score,
+            'level': level,
+            'date': time.strftime('%Y-%m-%d')
+        })
+        scores = sorted(scores, key=lambda x: (x['score'], x['level']), reverse=True)[:10]
+        with open(self.filepath, 'w') as f:
+            json.dump(scores, f)
+
+    def get_scores(self):
+        with open(self.filepath, 'r') as f:
+            return json.load(f)
+
+class SoundManager:
+    def __init__(self):
+        self.music_on = True
+        pygame.mixer.init()
+        
+        # Try to load sounds
+        try:
+            self.correct_sound = pygame.mixer.Sound('assets/Sounds/correct.wav')
+            self.wrong_sound = pygame.mixer.Sound('assets/Sounds/wrong.wav')
+        except:
+            # Create empty sounds if files not found
+            self.correct_sound = pygame.mixer.Sound(buffer=bytearray())
+            self.wrong_sound = pygame.mixer.Sound(buffer=bytearray())
+
+    def play_correct(self):
+        try:
+            self.correct_sound.play()
+        except:
+            pass
+
+    def play_wrong(self):
+        try:
+            self.wrong_sound.play()
+        except:
+            pass
+
+    def toggle_music(self):
+        if self.music_on:
+            pygame.mixer.music.pause()
+        else:
+            pygame.mixer.music.unpause()
+        self.music_on = not self.music_on
