@@ -1,6 +1,98 @@
-Main File：
+Here are the evidence of adjusting my code :Major Enhancements in Version 2.0
+. Unified Player Info & Level Selection Screen
+We've combined the player registration and level selection into a single intuitive interface, reducing navigation steps by 50%. The new design features robust name validation:
+
+python
+def confirm_name(self):
+    name = self.name_var.get().strip()
+    # Validate name (15 chars max, alphanumeric only)
+    if not name:
+        self.status_label.config(text='Name cannot be empty!', fg='red')
+        return
+    if len(name) > 15:
+        self.status_label.config(text='Name too long (max 15 characters)!', fg='red')
+        return
+    if not name.replace(" ", "").isalnum():
+        self.status_label.config(text='Name can only contain letters/numbers!', fg='red')
+        return
+    
+    self.name_confirmed = True
+    self.status_label.config(text=f'Welcome, {name}!', fg='green')
+2. Enhanced Game Mechanics
+Key gameplay improvements include:
+
+Increased question time from 20s → 45s (TIME_PER_QUESTION = 45)
+
+Rebalanced jellyfish speeds for better difficulty progression:
+
+python
+JELLYFISH_SPEEDS = {
+    'Easy': 2.3,   # Faster movement for beginners
+    'Medium': 1.9, # Moderate challenge
+    'Hard': 1.7    # Slower but more complex problems
+}
+Improved physics with better boundary collision handling
+
+3. Contextual Problem Generation
+Math problems now feature engaging SpongeBob-themed scenarios:
+
+python
+def _create_linear(self):
+    items = random.choice([
+        ("toys", "toy", "fee"),
+        ("tickets", "ticket", "service charge")
+    ])
+    price = random.randint(2,9)
+    quantity = random.randint(1,10)
+    fee = random.randint(1,10)
+    total = price * quantity + fee
+    
+    return (f"${price} per {items[1]} + ${fee} {items[2]} = ${total}. "
+            f"How many {items[0]}?"), quantity
+4. Enhanced Score Management
+The scoring system now includes timestamps and better sorting:
+
+python
+def save_result(self, name, points, difficulty):
+    return {
+        'player': self._clean_name(name),
+        'score': max(0, points),
+        'difficulty': difficulty,
+        'timestamp': time.strftime("%Y-%m-%d %H:%M")  # New timestamp field
+    }
+5. Robust Audio Handling
+Comprehensive error handling ensures graceful degradation when audio resources are unavailable:
+
+python
+def __init__(self):
+    self.sounds_available = False
+    try:
+        pygame.mixer.init()
+        self._load_audio()
+        self.sounds_available = True
+    except Exception as e:
+        print(f"Audio initialization failed: {e}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Version 2 Main File：
 import time
-import tkinter as tk
+import tkinter as tk 
 from Game_core import StartPage, PlayerInfoPage, LevelMapPage, GamePage, LeaderboardPage
 from utils import SoundManager
 
