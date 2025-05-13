@@ -77,20 +77,8 @@ def __init__(self):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 Version 2 Main File：
+
 import time
 import tkinter as tk 
 from Game_core import StartPage, PlayerInfoPage, LevelMapPage, GamePage, LeaderboardPage
@@ -179,7 +167,7 @@ if __name__ == '__main__':
     app = BeatMathApp()
     app.mainloop()
 
-Game_core File
+Game_core File:
 
 import tkinter as tk
 from tkinter import messagebox
@@ -200,9 +188,9 @@ LEVEL_NAMES = {
 }
 LEVEL_POINTS = {'Easy': 10, 'Medium': 100, 'Hard': 1000}
 BACKGROUND_COLORS = {
-    'Easy': '#88cfff',   # Light blue - Jellyfish Fields
+    'Easy': '#ff9966',   # Light blue - Jellyfish Fields
     'Medium': '#ff9966', # Light orange - Krusty Krab
-    'Hard': '#9b59b6'    # Light purple - Squidward's House
+    'Hard': '#ff9966'    # Light purple - Squidward's House
 }
 
 STATUS_BAR_COLOR = '#3A6EA5'  # Dark blue status bar
@@ -210,7 +198,7 @@ TEXT_COLOR = '#2C3E50'        # Dark blue text
 
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
-        super().__init__(parent, bg='#88cfff')
+        super().__init__(parent, bg='#ff9966')
         self.controller = controller
         self._create_widgets()
     
@@ -1135,7 +1123,8 @@ class LeaderboardPage(tk.Frame):
             
             prev_score = score
 
-Utils file
+Utils file:
+
 import random
 import json
 import os
