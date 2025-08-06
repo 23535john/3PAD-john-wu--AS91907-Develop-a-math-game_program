@@ -1,1 +1,549 @@
 
+import random
+import json
+import os
+import time
+
+# Try to import pygame for sound effects, but don't crash if it's not available
+try:
+    import pygame
+    pygame_works = True
+except ImportError:
+    pygame_works = False
+    print("pygame not found - sound will be turned off")
+
+class ProblemGenerator:
+    """Makes math problems fun with SpongeBob stuff"""
+    
+    def __init__(self, difficulty='Easy'):
+        self.difficulty = difficulty
+        # Stuff from the show to make problems interesting
+        self.people = ['SpongeBob', 'Patrick', 'Squidward', 'Mr. Krabs', 'Sandy']
+        self.stuff = ['Krabby Patty', 'jellyfish', 'bubble', 'pineapple', 'treasure chest', 
+                     'karate glove', 'kite', 'net', 'spatula', 'money']
+        self.places = ['Bikini Bottom', 'Jellyfish Fields', 'Krusty Krab', 'Pineapple House', 
+                       'Rock Bottom', 'Goo Lagoon', 'Chum Bucket']
+
+    def create_problem(self):
+        """Makes a math problem with SpongeBob theme and gives you choices to pick from"""
+        if self.difficulty == 'Easy':
+            problem, answer = self._make_easy_one()
+        elif self.difficulty == 'Medium':
+            problem, answer = self._make_medium_one()
+        else:
+            problem, answer = self._make_hard_one()
+        
+        choices = self._make_choices(answer)
+        return problem, answer, choices
+
+    def _make_easy_one(self):
+        """Easy problems for beginners"""
+        what_kind = random.choice(['math', 'counting', 'money'])
+        
+        if what_kind == 'math':
+            return self._basic_math()
+        elif what_kind == 'counting':
+            return self._counting_stuff()
+        else:
+            return self._money_stuff()
+
+    def _basic_math(self):
+        """Simple adding, subtracting, multiplying with SpongeBob things"""
+        num1 = random.randint(1, 12)
+        num2 = random.randint(1, 12)
+        what_to_do = random.choice(['+', '-', 'x'])
+        
+        if what_to_do == 'x':
+            result = num1 * num2
+            thing = random.choice(self.stuff)
+            problem = f"SpongeBob has {num1} {thing}s. If he gets {num2} times more, how many {thing}s does he have now?"
+        elif what_to_do == '+':
+            result = num1 + num2
+            thing1, thing2 = random.sample(self.stuff, 2)
+            problem = f"Patrick found {num1} {thing1}s and {num2} {thing2}s. How many things did he find in total?"
+        else:  # subtraction
+            result = num1 - num2
+            thing = random.choice(self.stuff)
+            problem = f"Mr. Krabs had {num1} {thing}s. He sold {num2} of them. How many {thing}s does he have left?"
+        
+        return problem, result
+
+    def _counting_stuff(self):
+        """Counting problems with characters"""
+        person = random.choice(self.people)
+        thing = random.choice(self.stuff)
+        how_many = random.randint(3, 15)
+        
+        problem = f"{person} is collecting {thing}s. He already has {how_many} {thing}s. "
+        if random.choice([True, False]):
+            # Adding more
+            extra = random.randint(1, 8)
+            result = how_many + extra
+            problem += f"If he finds {extra} more {thing}s, how many {thing}s will he have?"
+        else:
+            # Taking some away
+            less = random.randint(1, min(how_many-1, 5))
+            result = how_many - less
+            problem += f"If he gives away {less} {thing}s, how many {thing}s will he have left?"
+        
+        return problem, result
+
+    def _money_stuff(self):
+        """Money problems at the Krusty Krab"""
+        cost = random.randint(2, 8)
+        how_many = random.randint(1, 10)
+        total = cost * how_many
+        
+        problem = f"A Krabby Patty costs ${cost}. If you buy {how_many} Krabby Patties, how much do you pay in total?"
+        return problem, total
+
+    def _make_medium_one(self):
+        """Medium problems - a bit harder"""
+        what_kind = random.choice(['equation', 'percent', 'sequence'])
+        
+        if what_kind == 'equation':
+            return self._equation_problem()
+        elif what_kind == 'percent':
+            return self._percent_problem()
+        else:
+            return self._sequence_problem()
+
+    def _equation_problem(self):
+        """Simple equations like 2x + 3 = 11"""
+        problem_type = random.choice(['simple', 'reverse', 'two_step', 'fraction'])
+        
+        if problem_type == 'simple':
+            x = random.randint(3, 20)
+            a = random.randint(2, 8)
+            b = random.randint(5, 25)
+            result = a * x + b
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has {a} {thing}s. If someone gives him {b} more {thing}s, he now has {result} {thing}s. How many {thing}s did he have at first?"
+            return problem, x
+            
+        elif problem_type == 'reverse':
+            x = random.randint(4, 15)
+            a = random.randint(3, 10)
+            b = random.randint(10, 30)
+            result = a * x + b
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has some {thing}s. If he multiplies them by {a} and adds {b} more, he has {result} {thing}s. How many {thing}s did he have originally?"
+            return problem, x
+            
+        elif problem_type == 'two_step':
+            x = random.randint(5, 12)
+            a = random.randint(2, 6)
+            b = random.randint(8, 20)
+            c = random.randint(5, 15)
+            result = a * x + b - c
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has {a} times some {thing}s. He gets {b} more, then loses {c}. He now has {result} {thing}s. How many {thing}s did he have at first?"
+            return problem, x
+            
+        else:  # fraction
+            x = random.randint(6, 18)
+            a = random.randint(2, 5)
+            b = random.randint(10, 25)
+            result = (x * a) + b
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has {a} times some {thing}s plus {b} extra. He has {result} {thing}s total. How many {thing}s did he have originally?"
+            return problem, x
+
+    def _percent_problem(self):
+        """Percentage problems"""
+        problem_type = random.choice(['increase', 'decrease', 'reverse'])
+        
+        if problem_type == 'increase':
+            percent = random.choice([15, 25, 30, 40, 60])
+            original = random.randint(20, 80)
+            new_amount = int(original * (1 + percent/100))
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} had {original} {thing}s. After a {percent}% increase, how many {thing}s does he have now?"
+            return problem, new_amount
+            
+        elif problem_type == 'decrease':
+            percent = random.choice([20, 25, 30, 40, 50])
+            original = random.randint(30, 120)
+            new_amount = int(original * (1 - percent/100))
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} had {original} {thing}s. After a {percent}% decrease, how many {thing}s does he have now?"
+            return problem, new_amount
+            
+        else:  # reverse
+            percent = random.choice([20, 25, 30, 40, 50])
+            final_amount = random.randint(25, 100)
+            original = int(final_amount / (1 - percent/100))
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} lost {percent}% of his {thing}s and now has {final_amount} {thing}s. How many {thing}s did he have originally?"
+            return problem, original
+
+    def _sequence_problem(self):
+        """Find the next number in a pattern"""
+        sequence_type = random.choice(['arithmetic', 'arithmetic', 'geometric', 'fibonacci'])
+        
+        if sequence_type == 'arithmetic':
+            start = random.randint(5, 20)
+            step = random.randint(3, 12)
+            sequence = [start, start + step, start + 2*step, start + 3*step]
+            answer = start + 4*step
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} is counting {thing}s. Each number adds {step}: {sequence[0]}, {sequence[1]}, {sequence[2]}, {sequence[3]}, ... What comes next?"
+            return problem, answer
+            
+        elif sequence_type == 'geometric':
+            start = random.randint(2, 6)
+            multiplier = random.randint(2, 4)
+            sequence = [start, start * multiplier, start * multiplier**2, start * multiplier**3]
+            answer = start * multiplier**4
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} is counting {thing}s. Each number is multiplied by {multiplier}: {sequence[0]}, {sequence[1]}, {sequence[2]}, {sequence[3]}, ... What comes next?"
+            return problem, answer
+            
+        elif sequence_type == 'alternating':
+            start = random.randint(10, 25)
+            add_step = 3
+            sub_step = 1
+            
+            sequence = [start, start + add_step, start + add_step - sub_step, start + add_step - sub_step + add_step]
+            answer = start + add_step - sub_step + add_step - sub_step
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} is counting {thing}s. The pattern is add {add_step}, subtract {sub_step}, add {add_step}, subtract {sub_step}: {sequence[0]}, {sequence[1]}, {sequence[2]}, {sequence[3]}, ... What comes next?"
+            return problem, answer
+            
+        else:  # fibonacci
+            a = random.randint(3, 8)
+            b = random.randint(3, 8)
+            sequence = [a, b, a + b, b + (a + b)]
+            answer = (a + b) + (b + (a + b))
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} is counting {thing}s. Each number is the sum of the previous two: {sequence[0]}, {sequence[1]}, {sequence[2]}, {sequence[3]}, ... What comes next?"
+            return problem, answer
+
+    def _make_hard_one(self):
+        """Hard problems for smart people"""
+        what_kind = random.choice(['quadratic', 'system', 'geometry'])
+        
+        if what_kind == 'quadratic':
+            return self._quadratic_problem()
+        elif what_kind == 'system':
+            return self._system_problem()
+        else:
+            return self._geometry_problem()
+
+    def _quadratic_problem(self):
+        """Quadratic equations that factor nicely"""
+        # Pick nice numbers that work well together
+        x1 = random.randint(2, 8)
+        x2 = random.randint(2, 8)
+        
+        # Make sure they're different
+        if x1 == x2:
+            x2 = random.randint(9, 12)
+        
+        # (x - x1)(x - x2) = x^2 - (x1+x2)x + x1*x2
+        a = 1
+        b = -(x1 + x2)
+        c = x1 * x2
+        
+        # Pick one of the roots as the answer
+        answer = random.choice([x1, x2])
+        
+        person = random.choice(self.people)
+        thing = random.choice(self.stuff)
+        
+        # Format the equation naturally - no "plus negative" stuff
+        if b >= 0:
+            equation = f"x² + {b}x + {c}"
+        else:
+            equation = f"x² {b}x + {c}"  # b is negative, so it shows as minus
+        
+        problem = f"{person} is solving: {equation} = 0. One solution is x = {answer}. What's the other solution?"
+        # Return the other root
+        other_answer = x1 if answer == x2 else x2
+        return problem, other_answer
+
+    def _system_problem(self):
+        """System of two equations"""
+        # Make simple equations that are easy to solve
+        x = random.randint(3, 10)
+        y = random.randint(3, 10)
+        
+        if x <= y:
+            x, y = y, x
+        
+        # x + y = something, x - y = something else
+        sum_xy = x + y
+        diff_xy = x - y
+        
+        person1, person2 = random.sample(self.people, 2)
+        thing1, thing2 = random.sample(self.stuff, 2)
+        
+        problem = f"{person1} has x {thing1}s and y {thing2}s. {person2} has the same x {thing1}s but different y {thing2}s. "
+        problem += f"Together they have {sum_xy} items, but the difference is {diff_xy}. What is x?"
+        
+        return problem, x
+
+    def _geometry_problem(self):
+        """Simple area or perimeter problems"""
+        what_kind = random.choice(['area', 'perimeter'])
+        
+        if what_kind == 'area':
+            length = random.randint(3, 10)
+            width = random.randint(3, 10)
+            area = length * width
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has a {thing} garden that is {length} feet long and {width} feet wide. What's the area in square feet?"
+            return problem, area
+        else:
+            # Perimeter
+            side = random.randint(4, 12)
+            perimeter = 4 * side
+            
+            person = random.choice(self.people)
+            thing = random.choice(self.stuff)
+            
+            problem = f"{person} has a square {thing} box with sides of {side} inches. What's the perimeter in inches?"
+            return problem, perimeter
+
+    def _make_choices(self, correct_answer):
+        """Makes 4 choices, one correct and three wrong ones"""
+        choices = [correct_answer]
+        
+        # Add some wrong answers that make sense
+        if correct_answer > 0:
+            # Common mistakes: off by 1, off by 10, double, half
+            wrong1 = correct_answer + 1
+            wrong2 = correct_answer + 10
+            wrong3 = correct_answer * 2
+            wrong4 = correct_answer // 2 if correct_answer > 1 else correct_answer + 5
+            
+            if correct_answer > 20:
+                wrong5 = correct_answer + random.randint(-5, 5)
+                wrong6 = correct_answer + random.randint(15, 25)
+                wrong7 = int(correct_answer * 1.5)
+                wrong8 = int(correct_answer * 0.75)
+            else:
+                wrong5 = correct_answer + random.randint(-3, 3)
+                wrong6 = correct_answer + random.randint(8, 15)
+                wrong7 = correct_answer * 3
+                wrong8 = max(1, correct_answer - 5)
+            
+            # Pick 3 different wrong answers
+            wrong_answers = list(set([wrong1, wrong2, wrong3, wrong4, wrong5, wrong6, wrong7, wrong8]))
+            wrong_answers = wrong_answers[:3]  # Take first 3
+            
+            choices.extend(wrong_answers)
+        
+        # If we don't have 4 choices yet, add some random ones
+        while len(choices) < 4:
+            if correct_answer > 50:
+                random_wrong = correct_answer + random.randint(-20, 30)
+            elif correct_answer > 20:
+                random_wrong = correct_answer + random.randint(-10, 20)
+            else:
+                random_wrong = correct_answer + random.randint(-5, 15)
+            
+            if random_wrong != correct_answer and random_wrong not in choices and random_wrong > 0:
+                choices.append(random_wrong)
+        
+        # Shuffle them up
+        random.shuffle(choices)
+        return choices
+
+
+class ScoreManager:
+    """Handles saving and loading high scores"""
+    
+    def __init__(self, filename='highscores.json'):
+        self.filename = filename
+        self._make_file_if_needed()
+    
+    def _make_file_if_needed(self):
+        """Creates the file if it doesn't exist"""
+        if not os.path.exists(self.filename):
+            with open(self.filename, 'w') as f:
+                json.dump([], f)
+    
+    def save_result(self, name, points, difficulty):
+        """Saves a new score to the file"""
+        # Clean up the name first
+        clean_name = self._clean_name(name)
+        
+        # Make the new record
+        new_record = {
+            'player': clean_name,
+            'score': points,
+            'difficulty': difficulty,
+            'date': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Read existing scores
+        try:
+            with open(self.filename, 'r') as f:
+                records = json.load(f)
+        except:
+            records = []
+        
+        # Check if player already has a score for this difficulty
+        player_exists = False
+        for i, record in enumerate(records):
+            if record.get('player') == clean_name and record.get('difficulty') == difficulty:
+                if points > record.get('score', 0):
+                    records[i] = new_record  # update with better score
+                    player_exists = True
+                    break
+                else:
+                    player_exists = True  # keep existing score
+                    break
+        
+        if not player_exists:
+            records.append(new_record)
+        
+        # Sort by score (highest first)
+        records.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Keep only top 50 scores
+        records = records[:50]
+        
+        # Save back to file
+        try:
+            with open(self.filename, 'w') as f:
+                json.dump(records, f, indent=2)
+        except Exception as e:
+            print(f"Couldn't save score: {e}")
+    
+    def _clean_name(self, name):
+        """Makes sure the name is safe to save"""
+        # Remove any weird characters, keep only letters, numbers, spaces
+        clean = ''.join(c for c in name if c.isalnum() or c.isspace())
+        return clean.strip()[:20]  # Limit to 20 characters
+    
+    def get_records(self):
+        """Gets all the saved scores"""
+        try:
+            with open(self.filename, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+
+
+class AudioManager:
+    """Handles all the sounds in the game"""
+    
+    def __init__(self):
+        self.sounds_work = False
+        if not pygame_works:
+            print("Sound is turned off - pygame not available")
+            return
+        
+        try:
+            pygame.mixer.init()
+            self.sounds_work = True
+            self._load_sounds()
+        except Exception as e:
+            print(f"Couldn't start sound: {e}")
+            self.sounds_work = False
+    
+    def _load_sounds(self):
+        """Loads all the sound files"""
+        if not pygame_works:
+            return
+        
+        try:
+            # Try to load background music
+            pygame.mixer.music.load('assets/Sounds/bgm.wav')
+            self.music_on = True
+        except:
+            self.music_on = False
+        
+        try:
+            # Load sound effects
+            self.correct_sound = pygame.mixer.Sound('assets/Sounds/correct.wav')
+            self.wrong_sound = pygame.mixer.Sound('assets/Sounds/wrong.wav')
+        except:
+            self.correct_sound = None
+            self.wrong_sound = None
+    
+    def toggle_music(self):
+        """Turns music on or off"""
+        if not pygame_works or not self.sounds_work:
+            return False
+        
+        try:
+            if self.music_on:
+                pygame.mixer.music.pause()
+                self.music_on = False
+            else:
+                pygame.mixer.music.unpause()
+                self.music_on = True
+            return self.music_on
+        except:
+            return False
+    
+    def play_correct(self):
+        """Plays the happy sound when you get it right"""
+        if pygame_works and self.sounds_work:
+            try:
+                self.correct_sound.play()
+            except:
+                pass
+    
+    def play_wrong(self):
+        """Plays the sad sound when you get it wrong"""
+        if pygame_works and self.sounds_work:
+            try:
+                self.wrong_sound.play()
+            except:
+                pass
+    
+    def stop_bg_music(self):
+        """Stops the background music"""
+        if pygame_works and self.sounds_work:
+            try:
+                pygame.mixer.music.stop()
+            except:
+                pass
+    
+    def cleanup(self):
+        """Cleans up when the game ends"""
+        if pygame_works and self.sounds_work:
+            try:
+                pygame.mixer.quit()
+            except:
+                pass
