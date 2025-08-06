@@ -24,3 +24,27 @@ Window Closing Protocol
 +     except:
 +         pass  # Graceful degradation
 +     self.destroy()
+
+
+2. game_objects.py Changes
+Jellyfish Animation Enhancement
+
+def animate(self):
+    current_time = time.time()  # NEW: Time-based animation
+    
+    for jelly in self.jellyfish:
++        wave_x = math.sin(current_time * 0.8 + jelly['animation_offset']) * 2
++        wave_y = math.cos(current_time * 1.2 + jelly['animation_offset']) * 2
++        new_x = jelly['x'] + jelly['dx'] + wave_x
++        new_y = jelly['y'] + jelly['dy'] + wave_y
+
+Improved Boundary Handling
+- if new_x < 40:
+-     new_x = 40
+-     jelly['dx'] = -jelly['dx']
++ if new_x < 60:  # Increased buffer space
++     new_x = 60
++     jelly['dx'] = abs(jelly['dx']) * 0.9  # Smoother bounce
+
+
+
