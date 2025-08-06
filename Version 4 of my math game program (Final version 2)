@@ -143,3 +143,11 @@ def handle_incorrect(self):
 +   ]
 +   message = random.choice(incorrect_messages)
 +   self.feedback_label.config(text=message, fg='#8B0000')
+
+def _get_leaderboard_info(self, player_name, score):
+    # Calculate player's ranking
+    if player_rank == 1:
+        return f"🏆 {player_name}, you're #1 on the leaderboard!", '#FFD700'
+    elif player_rank <= 10:
+        return f"📊 {player_name}, you're #{player_rank} on the leaderboard!", '#006994'
+    ...
