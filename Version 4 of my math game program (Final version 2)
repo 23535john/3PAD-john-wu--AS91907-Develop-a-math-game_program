@@ -74,3 +74,21 @@ def toggle_music(self):
         return False 
 
 
+4. Game_core.py Changes
+Error Tracking System (New Feature)
+# In GamePage.__init__
+self.wrong_questions = []  # Track incorrect answers
+self.current_question_data = None  # Store question metadata
+
+# In next_question
+self.current_question_data = {
+    'question': problem,
+    'correct_answer': answer,
+    'options': options,
+    'question_number': self.question_count,
+    'user_answer': None
+}
+
+# In handle_incorrect
+if self.current_question_data:
+    self.wrong_questions.append(self.current_question_data.copy())
