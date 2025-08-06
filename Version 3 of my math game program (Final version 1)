@@ -1,0 +1,44 @@
+Based on my version 2  start to improve my code further: Here are the changes been made . 
+First File: Main.py (formerly Main File)
+Key Improvements:
+Replaced tuple-based page registration with dictionary for scalability
+Added intelligent window sizing based on page type
+Implemented automatic window centering for menu pages
+Added proper resource cleanup on window close
+
+class MathAdventureGame(tk.Tk):
+    def __init__(self):
+        # ... [initialization code] ...
+        
+    def _setup_container(self):
+        self.container = tk.Frame(self)
+        self.container.pack(fill='both', expand=True)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+    def _register_pages(self):
+        game_pages = {
+            'StartPage': StartPage,
+            'PlayerInfoMapPage': PlayerInfoMapPage,
+            'GamePage': GamePage,
+            'LeaderboardPage': LeaderboardPage
+        }
+        self.page_frames = {}
+        for page_name, page_class in game_pages.items():
+            frame = page_class(parent=self.container, controller=self)
+            self.page_frames[page_name] = frame
+            frame.grid(row=0, column=0, sticky='nsew')
+    
+    def _adjust_window_size(self, page_name):
+        large_pages = ['PlayerInfoMapPage', 'GamePage']
+        if page_name in large_pages:
+            self.geometry('1100x800')
+            self.resizable(True, True)
+        else:
+            self.geometry('780x620')
+            self.resizable(False, False)
+            self.update_idletasks()
+            x = (self.winfo_screenwidth() // 2) - (780 // 2)
+            y = (self.winfo_screenheight() // 2) - (620 // 2)
+            self.geometry(f'780x620+{x}+{y}')
+
