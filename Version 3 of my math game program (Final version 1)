@@ -42,3 +42,35 @@ class MathAdventureGame(tk.Tk):
             y = (self.winfo_screenheight() // 2) - (620 // 2)
             self.geometry(f'780x620+{x}+{y}')
 
+Improve my Player Information Page Enhancement
+Key Improvements:
+
+Added player name uniqueness check against leaderboard  / Implemented smart name suggestions for duplicates / Added floating SpongeBob-themed decorations
+  
+*Removed character selection to simplify UI
+Enhanced visual design with themed colors and elements
+
+File: Game_core.py
+class PlayerInfoMapPage(tk.Frame):
+    def confirm_name(self):
+        # ... [validation code] ...
+        
+        # Check for duplicate names in leaderboard
+        existing_records = score_manager.get_records()
+        existing_names = [record.get('player', '').lower() for record in existing_records]
+        
+        if name.lower() in existing_names:
+            suggestions = [f"{name}1", f"{name}2", f"{name}2024"]
+            self.name_validation_label.config(
+                text=f'❌ "{name}" already exists!\n💡 Try: {", ".join(suggestions)}', 
+                fg='red'
+            )
+            return
+        
+    def _add_floating_decorations(self):
+        decorations = ['⭐', '🐚', '🌊', '🐙', '🦀', '🎨']
+        positions = [(0.1, 0.1), (0.9, 0.1), ...]
+        for i, (relx, rely) in enumerate(positions):
+            deco_label = tk.Label( ... )
+            deco_label.place(relx=relx, rely=rely, anchor='center')
+
