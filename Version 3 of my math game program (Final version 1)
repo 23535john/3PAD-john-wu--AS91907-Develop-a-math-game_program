@@ -139,3 +139,29 @@ class GamePage(tk.Frame):
         if hasattr(self, '_answer_checked') and self._answer_checked:
             return
         self._answer_checked = True
+
+Problem Generation System Overhaul
+File: utils.py  Key Improvements:
+
+Added 3 difficulty levels with multiple problem types
+
+Created SpongeBob-themed context for all problems
+Implemented intelligent distractor generation
+Added geometry problem type for higher difficulty
+Improved problem variety and educational value
+
+class ProblemGenerator:
+    def _make_easy_one(self):
+        what_kind = random.choice(['math', 'counting', 'money'])
+        if what_kind == 'math': return self._basic_math()
+        elif what_kind == 'counting': return self._counting_stuff()
+        else: return self._money_stuff()
+        
+    def _basic_math(self):
+        # SpongeBob-themed problems
+        thing = random.choice(self.stuff)
+        problem = f"SpongeBob has {num1} {thing}s. If he gets {num2} times more..."
+        
+    def _geometry_problem(self):
+        what_kind = random.choice(['area', 'perimeter'])
+        # ... geometry problems ...
