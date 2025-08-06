@@ -3,7 +3,7 @@ Audio Initialization & Music Playback
 + def _start_music(self):
 +     """Try to start background music with error handling"""
 +     try:
-+         import pygame
++         import pygame 
 +         if pygame.mixer.get_init():
 +             pygame.mixer.music.play(-1)  # Loop indefinitely
 +             print("Music started")
@@ -111,3 +111,21 @@ def show_wrong_questions_summary(self):
         # Show correct answer
         tk.Label(..., text=f"✅ Correct Answer: {correct_answer}", 
                 bg='#90EE90', fg='#228B22').pack()
+
+Game Completion Dialog Redesign
+
+def game_completed(self):
+    # Create custom dialog instead of messagebox
+    dialog = tk.Toplevel()
+    dialog.geometry("1000x700")  # Larger window
+    
+    # Add action buttons
+    tk.Button(..., text="🎮 Play Again", command=...).pack()
+    tk.Button(..., text="📝 Review Questions", command=...).pack()
+    
+    # Add performance stats
+    tk.Label(..., text=f"📊 Performance: {correct_count} Correct | {wrong_count} Wrong").pack()
+    
+    # Add leaderboard ranking info
+    leaderboard_text, color = self._get_leaderboard_info(player_name, self.score)
+    tk.Label(..., text=leaderboard_text, fg=color).pack()
