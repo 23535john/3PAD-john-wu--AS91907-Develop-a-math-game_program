@@ -1,1 +1,186 @@
+import tkinter as tk
+from Game_core import StartPage, PlayerInfoMapPage, GamePage
+from game_objects import LeaderboardPage, InstructionPage
+from utils import AudioManager as SoundManager
 
+class MathAdventureGame(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        
+        self.title('SpongeBob Jellyfish Catcher')
+        self.geometry('780x620')
+        
+        # try to set the icon - might not work but that's fine
+        try:
+            self.iconbitmap('assets/Images/spongebob.png')
+        except:
+            pass
+        
+        # keep track of game stuff
+        self.player_name = ''
+        self.selected_difficulty = 'Easy'
+        self.page_history = []
+        self.last_score = None
+        
+        # set up sound
+        self.sound_manager = SoundManager()
+        self._start_music()
+        
+        # build the interface
+        self._setup_container()
+        self._register_pages()
+        
+        # start with the menu
+        self.current_page = 'StartPage'
+        self._show_frame('StartPage')
+
+    def _setup_container(self):
+        self.container = tk.Frame(self)
+        self.container.pack(fill='both', expand=True)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+    def _register_pages(self):
+        # create all the different pages for the game
+        pages = {
+            'StartPage': StartPage,
+            'PlayerInfoMapPage': PlayerInfoMapPage,
+            'GamePage': GamePage,
+            'LeaderboardPage': LeaderboardPage,
+            'InstructionPage': InstructionPage
+        }
+        
+        self.page_frames = {}
+        
+        # make each page and store it
+        for page_name, page_class in pages.items():
+            frame = page_class(parent=self.container, controller=self)
+            self.page_frames[page_name] = frame
+            frame.grid(row=0, column=0, sticky='nsew')
+
+    def _show_frame(self, page_name):
+        # keep track of where we were so we can go back
+        if self.current_page and self.current_page != page_name and self.current_page != 'StartPage':
+            self.page_history.append(self.current_page)
+        
+        target_frame = self.page_frames[page_name]
+        
+        # change the window size if we need to
+        self._adjust_window_size(page_name)
+        
+        # do any setup stuff before showing the page
+        self._pre_display_processing(page_name, target_frame)
+        
+        # actually switch to the new page
+        self.current_page = page_name
+        target_frame.tkraise()
+        
+        # make sure the menu stays the right size
+        if page_name == 'StartPage':
+            self.update_idletasks()
+            self.after(100, self._ensure_menu_size)
+    
+    def _ensure_menu_size(self):
+        if self.current_page == 'StartPage':
+            current_geometry = self.geometry()
+            if '780x620' not in current_geometry:
+                self._reset_to_menu_size()
+
+    def _adjust_window_size(self, page_name):
+        # some pages need more space to work properly
+        large_pages = ['PlayerInfoMapPage', 'GamePage']
+        
+        if page_name in large_pages:
+            # make it full screen for map and game pages
+            try:
+                self.state('zoomed')  # windows fullscreen
+            except:
+                try:
+                    self.attributes('-zoomed', True)  # linux fullscreen
+                except:
+                    # fallback to maximized
+                    self.state('normal')
+                    self.geometry('1920x1080')
+            self.resizable(True, True)
+        else:
+            # menu page - go back to the smaller size
+            try:
+                self.state('normal')
+            except:
+                pass
+            self.geometry('780x620')
+            self.resizable(False, False)
+            
+            # put the window in the center of the screen
+            self.update_idletasks()
+            x = (self.winfo_screenwidth() // 2) - (780 // 2)
+            y = (self.winfo_screenheight() // 2) - (620 // 2)
+            self.geometry(f'780x620+{x}+{y}')
+
+    def _pre_display_processing(self, page_name, frame):
+        # game page needs to reset when you go to it
+        if page_name == 'GamePage':
+            if not frame.reset_game():
+                return
+        
+        # leaderboard needs to update with new scores
+        if page_name == 'LeaderboardPage':
+            frame.refresh()
+
+    def show_frame(self, page_name):
+        self._show_frame(page_name)
+
+    def go_to_previous_page(self):
+        if self.page_history:
+            previous_page = self.page_history.pop()
+            self._show_frame(previous_page)
+        else:
+            # if  don't have any history, just go back to the menu
+            self._show_frame('StartPage')
+    
+    def _reset_to_menu_size(self):
+        try:
+            self.state('normal')
+        except:
+            pass
+        
+        self.geometry('780x620')
+        self.resizable(False, False)
+        self.update_idletasks()
+        x = (self.winfo_screenwidth() // 2) - (780 // 2)
+        y = (self.winfo_screenheight() // 2) - (620 // 2)
+        self.geometry(f'780x620+{x}+{y}')
+    
+    def _start_music(self):
+        # try to start the background music - this might fail but that's ok
+        try:
+            import pygame
+            if pygame.mixer.get_init():
+                pygame.mixer.music.play(-1)
+                print("Music started")
+            else:
+                print("No pygame mixer")
+        except ImportError:
+            print("Pygame not installed")
+        except Exception as e:
+            print(f"Music error: {e}")
+
+    def on_window_close(self):
+        try:
+            self.sound_manager.stop_bg_music()
+        except:
+            pass
+        self.destroy()
+
+    def destroy(self):
+        try:
+            self.sound_manager.cleanup()
+        except:
+            pass
+        super().destroy()
+
+# Start game
+if __name__ == '__main__':
+    game_app = MathAdventureGame()
+    game_app.protocol("WM_DELETE_WINDOW", game_app.on_window_close)
+    game_app.mainloop()
