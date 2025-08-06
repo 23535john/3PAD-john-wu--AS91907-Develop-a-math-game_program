@@ -57,4 +57,20 @@ diff
 +     equation = f"x² {b}x + {c}"  # Avoid "plus negative"
 + problem = f"{person} is solving: {equation} = 0..."
 
+Audio Manager Enhancement
+
+diff
+def toggle_music(self):
+    try:
+        if self.music_on:
+            pygame.mixer.music.pause()
+            self.music_on = False
+        else:
+            pygame.mixer.music.unpause()
+            self.music_on = True
+-       return True
++       return self.music_on  # Return actual state
+    except:
+        return False 
+
 
