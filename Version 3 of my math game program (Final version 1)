@@ -165,3 +165,28 @@ class ProblemGenerator:
     def _geometry_problem(self):
         what_kind = random.choice(['area', 'perimeter'])
         # ... geometry problems ...
+Leaderboard and Score Management
+File: game_objects.py
+Key Improvements:
+
+Added gold highlighting for current player
+Implemented score timestamp recording
+Enhanced UI with themed borders
+Improved scrolling and layout
+Fixed score sorting and saving
+class LeaderboardPage(tk.Frame):
+    def refresh(self):
+        # Highlight current player
+        if i == highlight_index:
+            bg_color = '#FFD700'  # Gold highlight
+        
+    def _create_widgets(self):
+        # Added themed border
+        border_frame = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
+        
+class ScoreManager:
+    def save_result(self, name, points, difficulty):
+        # Add timestamp
+        new_record = {
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+        }
