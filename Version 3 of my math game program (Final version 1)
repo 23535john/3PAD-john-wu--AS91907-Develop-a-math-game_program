@@ -74,3 +74,68 @@ class PlayerInfoMapPage(tk.Frame):
             deco_label = tk.Label( ... )
             deco_label.place(relx=relx, rely=rely, anchor='center')
 
+Jellyfish Management System
+File: game_objects.py (new file)
+Key Improvements:
+
+Created dedicated class for jellyfish management
+*Implemented collision detection algorithm  
+Added press/release visual feedback
+Used actual jellyfish images instead of circles
+Improved natural movement with wave patterns
+
+class JellyfishManager:
+    def __init__(self, canvas, difficulty):
+        self.jellyfish_images = self._load_jellyfish_images()
+        
+    def animate(self):
+        # Collision detection
+        min_distance = 100
+        for other_jelly in self.jellyfish:
+            if other_jelly != jelly:
+                dx = new_x - other_jelly['x']
+                dy = new_y - other_jelly['y']
+                distance = math.sqrt(dx*dx + dy*dy)
+                if distance < min_distance:
+                    push_x = (dx / distance) * (min_distance - distance) * 0.5
+                    push_y = (dy / distance) * (min_distance - distance) * 0.5
+                    new_x += push_x
+                    new_y += push_y
+    
+    def press_jellyfish(self, jelly_index):
+        # Visual feedback
+        self.canvas.itemconfig(jelly['bubble'], fill='#FFD700', outline='#FFA500', width=4)
+        self.canvas.scale(jelly['jelly_id'], jelly['x'], jelly['y']-20, 1.1, 1.1)
+        
+    def release_jellyfish(self, jelly_index):
+        # Revert visual changes
+        self.canvas.itemconfig(jelly['bubble'], fill='#F4E4BC', outline='#DAA520', width=2)
+        self.canvas.scale(jelly['jelly_id'], jelly['x'], jelly['y']-25, 1.0, 1.0)
+
+Game Page UI and Flow Enhancements
+File: Game_core.py
+Key Improvements:
+
+Added themed containers and visual decorations
+Implemented custom completion dialog with options
+Added duplicate click prevention
+Enhanced feedback messages with encouraging text
+Improved answer validation logic
+
+class GamePage(tk.Frame):
+    def _create_widgets(self):
+        # Added themed containers and decorations
+        question_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
+        canvas_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
+        feedback_container = tk.Frame(main_frame, bg='#87CEEB', bd=3, relief='raised')
+        
+    def game_completed(self):
+        # Custom dialog with options
+        dialog = tk.Toplevel()
+        # Play Again, Back to Menu, View Leaderboard buttons
+        
+    def check_answer(self, selected):
+        # Prevent multiple clicks
+        if hasattr(self, '_answer_checked') and self._answer_checked:
+            return
+        self._answer_checked = True
