@@ -190,3 +190,25 @@ class ScoreManager:
         new_record = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
         }
+ Audio System Improvements
+File: utils.py
+Key Improvements:
+
+Added graceful degradation when pygame unavailable
+
+Improved error messages
+
+Better resource cleanup
+
+Fixed music toggle feedback
+class AudioManager:
+    def __init__(self):
+        if not pygame_works:
+            print("Sound is turned off - pygame not available")
+            return
+        try:
+            pygame.mixer.init()
+            # ... load sounds ...
+        except Exception as e:
+            print(f"Couldn't start sound: {e}")
+            self.sounds_work = False
