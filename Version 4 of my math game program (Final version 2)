@@ -1,1 +1,26 @@
+1. Main.py Changes
+Audio Initialization & Music Playback
++ def _start_music(self):
++     """Try to start background music with error handling"""
++     try:
++         import pygame
++         if pygame.mixer.get_init():
++             pygame.mixer.music.play(-1)  # Loop indefinitely
++             print("Music started")
++         else:
++             print("No pygame mixer")
++     except ImportError:
++         print("Pygame not installed")
++     except Exception as e:
++         print(f"Music error: {e}")
 
+Window Closing Protocol
+- def on_window_close(self):
+-     self.sound_manager.stop_bg_music()
+-     self.destroy()
++ def on_window_close(self):
++     try:
++         self.sound_manager.stop_bg_music()
++     except:
++         pass  # Graceful degradation
++     self.destroy()
