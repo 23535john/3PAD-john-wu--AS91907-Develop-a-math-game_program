@@ -46,5 +46,15 @@ Improved Boundary Handling
 +     new_x = 60
 +     jelly['dx'] = abs(jelly['dx']) * 0.9  # Smoother bounce
 
+3. utils.py Changes
+Quadratic Equation Formatting Fix
+
+diff
+- problem = f"{person} is solving: x² + {b}x + {c} = 0..."
++ if b >= 0:
++     equation = f"x² + {b}x + {c}"
++ else:
++     equation = f"x² {b}x + {c}"  # Avoid "plus negative"
++ problem = f"{person} is solving: {equation} = 0..."
 
 
