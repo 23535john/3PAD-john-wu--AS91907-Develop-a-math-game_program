@@ -92,3 +92,22 @@ self.current_question_data = {
 # In handle_incorrect
 if self.current_question_data:
     self.wrong_questions.append(self.current_question_data.copy())
+
+
+Enhanced Review System (New Feature)
+
+
+def show_wrong_questions_summary(self):
+    # Create detailed review window
+    for i, wrong_q in enumerate(self.wrong_questions, 1):
+        # Display question with user/correct answers
+        tk.Label(..., text=f"Question #{wrong_q['question_number']}").pack()
+        tk.Label(..., text=wrong_q['question'], wraplength=1000).pack()
+        
+        # Highlight user's wrong answer
+        tk.Label(..., text=f"❌ Your Answer: {user_answer}", 
+                bg='#FFB6C1', fg='#8B0000').pack()
+        
+        # Show correct answer
+        tk.Label(..., text=f"✅ Correct Answer: {correct_answer}", 
+                bg='#90EE90', fg='#228B22').pack()
