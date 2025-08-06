@@ -1,1 +1,2055 @@
 
+
+import tkinter as tk
+from tkinter import messagebox
+from utils import ProblemGenerator as ProblemBank, ScoreManager
+from game_objects import JellyfishManager
+
+# game settings
+QUESTIONS_PER_GAME = 12
+# Increased time per question for easier gameplay
+TIME_PER_QUESTION = {'Easy': 90, 'Medium': 75, 'Hard': 60}
+LEVEL_NAMES = {
+    'Easy': "Jellyfish Fields",
+    'Medium': "Krusty Krab", 
+    'Hard': "Squidward's House"
+}
+LEVEL_POINTS = {'Easy': 50, 'Medium': 100, 'Hard': 300}
+BACKGROUND_COLORS = {
+    'Easy': '#88cfff',
+    'Medium': '#ff9966',
+    'Hard': '#9b59b6'
+}
+
+STATUS_BAR_COLOR = '#3A6EA5'
+TEXT_COLOR = '#2C3E50'
+
+class StartPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='#76deee')
+        self.controller = controller
+        self._create_widgets()
+    
+    def _create_widgets(self):
+        # try to load background image
+        try:
+            bg_image = tk.PhotoImage(file='assets/Images/bg_menu.png')
+            bg_label = tk.Label(self, image=bg_image)
+            bg_label.image = bg_image
+            bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+        except:
+            self.config(bg='#82d4ed')
+        
+        title_frame = tk.Frame(self, bg='#76deee')
+        title_frame.place(relx=0.5, rely=0.2, anchor='center')
+        
+        # button styling
+        btn_style = {
+            'font': ('Comic Sans MS', 18),
+            'bg': '#FFD700', 
+            'fg': 'black',
+            'activebackground': '#FFA500',
+            'relief': 'raised', 
+            'bd': 3,
+            'width': 13,
+            'pady': 7
+        }
+        
+        btn_frame = tk.Frame(self, bg="#76deee")
+        btn_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        tk.Button(
+            btn_frame, 
+            text='Start Game', 
+            **btn_style,
+            command=lambda: self.controller.show_frame('PlayerInfoMapPage')
+        ).pack(pady=10)
+        
+        tk.Button(
+            btn_frame, 
+            text='Leaderboard', 
+            **btn_style,
+            command=lambda: self.controller.show_frame('LeaderboardPage')
+        ).pack(pady=10)
+        
+        tk.Button(
+            btn_frame, 
+            text='Exit Game', 
+            **btn_style,
+            command=self.controller.destroy
+        ).pack(pady=10)
+        
+        # music button
+        try:
+            music_text = '🎵 MUSIC ON' if self.controller.sound_manager.music_on else '🔇 MUSIC OFF'
+        except:
+            music_text = '🔇 MUSIC OFF'
+            
+        self.music_btn = tk.Button(
+            self, 
+            text=music_text,
+            font=('Comic Sans MS', 10, 'bold'), 
+            bg="#AAFF00", 
+            fg='#2C3E50',
+            bd=1,
+            relief='raised',
+            padx=4,
+            pady=2,
+            command=self.toggle_music
+        )
+        self.music_btn.place(x=620, y=10)
+        
+    def toggle_music(self):
+        try:
+            music_on = self.controller.sound_manager.toggle_music()
+            music_text = '🎵 MUSIC ON' if music_on else '🔇 MUSIC OFF'
+            self.music_btn.config(text=music_text)
+        except Exception as e:
+            music_text = '🔇 MUSIC OFF'
+            self.music_btn.config(text=music_text)
+            print(f"Music toggle failed: {e}")
+
+class PlayerInfoMapPage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='#FFE4B5')
+        self.controller = controller
+        self._create_widgets()
+        self.name_confirmed = False
+    
+    def _create_widgets(self):
+       
+        
+        # Title area
+        title_frame = tk.Frame(self, bg='#FFE4B5')
+        title_frame.place(relx=0.5, rely=0.05, anchor='center')
+        
+        # Welcome decorations
+        welcome_frame = tk.Frame(title_frame, bg='#FFE4B5')
+        welcome_frame.pack(pady=5)
+        
+        tk.Label(
+            welcome_frame, 
+            text='🌟 Welcome to Bikini Bottom! 🌟',
+            font=('Comic Sans MS', 18, 'bold'),
+            bg='#FFE4B5', 
+            fg='#FFD700'
+        ).pack()
+        
+        tk.Label(
+            welcome_frame, 
+            text='🐙 Ready for a math adventure? 🐙',
+            font=('Comic Sans MS', 14),
+            bg='#FFE4B5', 
+            fg='#006994'
+        ).pack(pady=5)
+        
+        # User info form
+        form_frame = tk.Frame(self, bg='#FFD700', bd=5, relief='groove')
+        form_frame.place(relx=0.5, rely=0.2, anchor='center', width=400, height=250)
+        
+        # Username input
+        tk.Label(
+            form_frame, 
+            text="Enter Your Username: 🧽", 
+            bg='#FFD700',
+            font=('Comic Sans MS', 14, 'bold'),
+            fg='#2C3E50'
+        ).pack(pady=5)
+        
+        # Hint text
+        tk.Label(
+            form_frame,
+            text='(Pick a fun username, 3-15 characters)',
+            bg='#FFD700',
+            font=('Comic Sans MS', 10),
+            fg='#666666'
+        ).pack(pady=2)
+        
+        self.name_var = tk.StringVar()
+        name_entry = tk.Entry(
+            form_frame, 
+            textvariable=self.name_var, 
+            font=('Comic Sans MS', 12), 
+            width=25,
+            relief='sunken',
+            bd=2
+        )
+        name_entry.pack(pady=5)
+        name_entry.focus_set()
+        
+        # validation label
+        self.name_validation_label = tk.Label(
+            form_frame,
+            text='',
+            bg='#FFD700',
+            font=('Comic Sans MS', 10),
+            fg='red'
+        )
+        self.name_validation_label.pack(pady=2)
+        
+        # Confirm button
+        confirm_btn = tk.Button(
+            form_frame, 
+            text='Confirm Name', 
+            font=('Comic Sans MS', 12),
+            bg='#4CAF50', 
+            fg='white',
+            padx=10,
+            pady=5,
+            command=self.confirm_name
+        )
+        confirm_btn.pack(pady=10)
+        
+        # Map title
+        map_title_frame = tk.Frame(self, bg='#FFE4B5')
+        map_title_frame.place(relx=0.5, rely=0.4, anchor='center')
+        
+        # Decorative elements
+        decoration_frame = tk.Frame(map_title_frame, bg='#FFE4B5')
+        decoration_frame.pack(pady=5)
+        
+        tk.Label(
+            decoration_frame, 
+            text='⭐ 🐚 ⭐',
+            font=('Comic Sans MS', 16),
+            bg='#FFE4B5', 
+            fg='#FFD700'
+        ).pack()
+        
+        tk.Label(
+            map_title_frame, 
+            text='🗺️ Choose Your Difficulty:',
+            font=('Comic Sans MS', 22, 'bold'),
+            bg='#FFE4B5', 
+            fg='#006994'
+        ).pack(pady=5)
+        
+        tk.Label(
+            map_title_frame, 
+            text='🎮 Click on a location to start your math journey!',
+            font=('Comic Sans MS', 12),
+            bg='#FFE4B5', 
+            fg='#666666'
+        ).pack(pady=5)
+        
+        # More decorations
+        tk.Label(
+            decoration_frame, 
+            text='⭐ 🐚 ⭐',
+            font=('Comic Sans MS', 16),
+            bg='#FFE4B5', 
+            fg='#FFD700'
+        ).pack()
+        
+        # Map selection frame
+        map_frame = tk.Frame(self, bg='#FFE4B5')
+        map_frame.place(relx=0.5, rely=0.65, anchor='center')
+        
+        # Level descriptions and colors
+        level_info = [
+            ("🌊 Jellyfish Fields\n\n🎯 Easy Difficulty\n💎 50 points per question\n\n🐙 Perfect for beginners!", '#87CEEB', 'Easy', '🐙'),
+            ("🍔 Krusty Krab\n\n⚡ Medium Difficulty\n💎 100 points per question\n\n🦀 For experienced players!", '#FFB347', 'Medium', '🦀'),
+            ("🎨 Squidward's House\n\n🔥 Hard Difficulty\n💎 300 points per question\n\n🎷 Ultimate challenge!", '#DDA0DD', 'Hard', '🎷')
+        ]
+        
+        for i, (desc, color, level, emoji) in enumerate(level_info):
+            # Create button container
+            btn_container = tk.Frame(map_frame, bg=color, bd=5, relief='raised')
+            btn_container.grid(row=0, column=i, padx=20, pady=15)
+            
+            # Add decorative border
+            border_frame = tk.Frame(btn_container, bg='#FFD700', bd=3, relief='sunken')
+            border_frame.pack(fill='both', expand=True, padx=4, pady=4)
+            
+            level_btn = tk.Button(
+                border_frame, 
+                text=f"{emoji}\n{desc}",
+                font=('Comic Sans MS', 14, 'bold'),
+                bg=color, 
+                fg='white', 
+                width=22, 
+                height=8,
+                relief='flat',
+                bd=0,
+                activebackground='#FFD700',
+                activeforeground='#2C3E50',
+                cursor='hand2',
+                command=lambda l=level: self.start_level(l)
+            )
+            level_btn.pack(fill='both', expand=True, padx=3, pady=3)
+        
+        # Button frame
+        button_frame = tk.Frame(self, bg='#FFE4B5')
+        button_frame.place(relx=0.5, rely=0.92, anchor='center')
+        
+        # New player button
+        new_player_btn = tk.Button(
+            button_frame, 
+            text='👤 New Player', 
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#4CAF50', 
+            fg='white',
+            padx=12,
+            pady=6,
+            relief='raised',
+            bd=3,
+            command=self.reset_player_info
+        )
+        new_player_btn.pack(side='left', padx=10)
+        
+        # Instruction button
+        instruction_btn = tk.Button(
+            button_frame, 
+            text='📖 Instructions', 
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#4CAF50', 
+            fg='white',
+            padx=12,
+            pady=6,
+            relief='raised',
+            bd=3,
+            command=lambda: self.controller.show_frame('InstructionPage')
+        )
+        instruction_btn.pack(side='left', padx=10)
+        
+        # Main menu button
+        menu_btn = tk.Button(
+            button_frame, 
+            text='🏠 Main Menu', 
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#FFD700', 
+            fg='#2C3E50',
+            padx=12,
+            pady=6,
+            relief='raised',
+            bd=3,
+            command=lambda: self.controller.show_frame('StartPage')
+        )
+        menu_btn.pack(side='left', padx=10)
+        
+        # Status label
+        self.status_label = tk.Label(
+            self, 
+            text='Please enter and confirm your name first',
+            font=('Comic Sans MS', 12),
+            bg='#FFE4B5',
+            fg='#2C3E50'
+        )
+        self.status_label.place(relx=0.5, rely=0.32, anchor='center')
+        
+        # Add floating decorations
+        self._add_floating_decorations()
+
+    def confirm_name(self):
+        name = self.name_var.get().strip()
+        
+        self.name_validation_label.config(text='')
+        
+        if not name:
+            self.name_validation_label.config(text='❌ Name cannot be empty!', fg='red')
+            return
+            
+        if len(name) < 3:
+            self.name_validation_label.config(text='❌ Name must be at least 3 characters long!', fg='red')
+            return
+            
+        if len(name) > 15:
+            self.name_validation_label.config(text='❌ Name too long (max 15 characters)!', fg='red')
+            return
+            
+        if not name.replace(" ", "").isalnum():
+            self.name_validation_label.config(text='❌ Name can only contain letters and numbers!', fg='red')
+            return
+        
+        from utils import ScoreManager
+        score_manager = ScoreManager()
+        existing_records = score_manager.get_records()
+        existing_names = [record.get('player', '').lower() for record in existing_records]
+        
+        if name.lower() in existing_names:
+            suggestions = [
+                f"{name}1", f"{name}2", f"{name}2024", f"{name}_player", 
+                f"Super{name}", f"{name}Math", f"{name}Star"
+            ]
+            suggestion_text = ", ".join(suggestions[:3])
+            
+            self.name_validation_label.config(
+                text=f'❌ "{name}" already exists in the leaderboard!\n💡 Try: {suggestion_text}', 
+                fg='red'
+            )
+            return
+        
+        self.name_confirmed = True
+        self.name_validation_label.config(text='✅ Name confirmed! Choose your difficulty level.', fg='green')
+        self.status_label.config(text=f'Welcome, {name}! Ready to play!', fg='green')
+
+    def start_level(self, level):
+        if not self.name_confirmed:
+            self.status_label.config(text='Please confirm your name first!', fg='red')
+            return
+            
+        name = self.name_var.get().strip()
+        self.controller.player_name = name
+        self.controller.selected_difficulty = level
+        self.controller.show_frame('GamePage')
+
+    def _add_floating_decorations(self):
+        decorations = ['⭐', '🐚', '🌊', '🐙', '🦀', '🎨']
+        positions = [
+            (0.1, 0.1), (0.9, 0.1), (0.1, 0.9), (0.9, 0.9),
+            (0.2, 0.2), (0.8, 0.2), (0.2, 0.8), (0.8, 0.8)
+        ]
+        
+        for i, (relx, rely) in enumerate(positions):
+            if i < len(decorations):
+                deco_label = tk.Label(
+                    self,
+                    text=decorations[i],
+                    font=('Comic Sans MS', 20),
+                    bg='#FFE4B5',
+                    fg='#FFD700'
+                )
+                deco_label.place(relx=relx, rely=rely, anchor='center')
+    
+    def reset_player_info(self):
+        self.name_var.set('')
+        self.name_confirmed = False
+        
+        self.name_validation_label.config(text='')
+        self.status_label.config(text='Please enter and confirm your name first', fg='#2C3E50')
+
+class GamePage(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent, bg='white')
+        self.controller = controller
+        self.jellyfish_manager = None
+        
+        self._active_timers = []
+        self._game_active = False
+        
+        self.wrong_questions = []
+        self.current_question_data = None
+        
+        self._create_widgets()
+        self.reset_game()
+    
+    def _create_widgets(self):
+        self.config(bg='#FFE4B5')
+        main_frame = tk.Frame(self, bg='#FFE4B5')
+        main_frame.pack(fill='both', expand=True, padx=15, pady=15)
+        
+        top_nav = tk.Frame(main_frame, bg='#FFD700', height=60, bd=3, relief='raised')
+        top_nav.pack(fill='x', pady=(0, 10))
+        top_nav.pack_propagate(False)
+        
+        back_btn = tk.Button(
+            top_nav, 
+            text='🗺️ Back to Map', 
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#FF6B35',
+            fg='white',
+            padx=15,
+            pady=8,
+            relief='raised',
+            bd=3,
+            cursor='hand2',
+            command=self.return_to_map
+        )
+        back_btn.pack(side='right', padx=15, pady=10)
+        
+        game_title = tk.Label(
+            top_nav,
+            text='🧽 SpongeBob Math Adventure 🧽',
+            font=('Comic Sans MS', 16, 'bold'),
+            bg='#FFD700',
+            fg='#2C3E50'
+        )
+        game_title.pack(side='left', padx=15, pady=10)
+    
+        status_bar = tk.Frame(main_frame, bg=STATUS_BAR_COLOR, height=50)
+        status_bar.pack(fill='x', pady=(0, 10))
+        
+        self.lives_frame = tk.Frame(status_bar, bg=STATUS_BAR_COLOR)
+        self.lives_frame.pack(side='left', padx=15)
+        
+        try:
+            self.heart_img = tk.PhotoImage(file='assets/Images/heart.png')
+            self.heart_img = self.heart_img.subsample(4, 4)
+        except Exception:
+            self.heart_img = None
+        
+        self.lives_labels = []
+        for i in range(3):
+            if self.heart_img:
+                label = tk.Label(self.lives_frame, image=self.heart_img, bg=STATUS_BAR_COLOR)
+            else:
+                label = tk.Label(self.lives_frame, text='♥', 
+                            font=('Comic Sans MS', 20), 
+                            fg='#FF6B6B', bg=STATUS_BAR_COLOR)
+            label.pack(side='left', padx=2)
+            self.lives_labels.append(label)
+        
+        # score display
+        self.score_label = tk.Label(
+            status_bar, 
+            text='Score: 0', 
+            font=('Comic Sans MS', 16), 
+            fg='#FFF44F',
+            bg=STATUS_BAR_COLOR
+        )
+        self.score_label.pack(side='left', padx=15)
+        
+        # timer display
+        self.timer_label = tk.Label(
+            status_bar, 
+            text='Time: 20s', 
+            font=('Comic Sans MS', 16), 
+            fg='white', 
+            bg=STATUS_BAR_COLOR
+        )
+        self.timer_label.pack(side='right', padx=15)
+        
+        # question counter
+        self.counter_label = tk.Label(
+            status_bar, 
+            text='Question: 1/12', 
+            font=('Comic Sans MS', 16), 
+            fg='white', 
+            bg=STATUS_BAR_COLOR
+        )
+        self.counter_label.pack(side='right', padx=15)
+    
+        # Question display - SpongeBob themed version
+        question_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
+        question_container.pack(fill='x', padx=15, pady=10)
+        
+        # Question title decoration
+        question_title = tk.Label(
+            question_container,
+            text='🧽 Question Time! 🧽',
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#FFD700',
+            fg='#2C3E50'
+        )
+        question_title.pack(pady=(5, 0))
+        
+        self.question_label = tk.Label(
+            question_container, 
+            text='', 
+            font=('Comic Sans MS', 16, 'bold'), 
+            bg='#FFD700', 
+            fg='#2C3E50',
+            wraplength=600,
+            pady=15
+        )
+        self.question_label.pack(fill='x', padx=15, pady=10)
+    
+        # Jellyfish canvas container - Enhanced SpongeBob theme
+        canvas_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
+        canvas_container.pack(fill='both', expand=True, pady=10)
+        
+        # Add canvas title decoration
+        canvas_title = tk.Frame(canvas_container, bg='#FFD700')
+        canvas_title.pack(side='top', pady=(5, 0))
+        
+        title_label = tk.Label(
+            canvas_title,
+            text='🐠 Click correct answer Under the Jellyfish! 🐠',
+            font=('Comic Sans MS', 16, 'bold'),
+            bg='#FFD700',
+            fg='#006994'
+        )
+        title_label.pack(side='left', padx=15)
+        
+        # Add SpongeBob decorations
+        decoration_label = tk.Label(
+            canvas_title,
+            text='🧽 🦀 🐙 🐠 ⭐',
+            font=('Comic Sans MS', 14),
+            bg='#FFD700',
+            fg='#FF6B35'
+        )
+        decoration_label.pack(side='right', padx=15)
+        
+        # Canvas border
+        canvas_border = tk.Frame(canvas_container, bg='#FF6B35', bd=2, relief='sunken')
+        canvas_border.pack(fill='both', expand=True, padx=5, pady=5)
+    
+        self.canvas = tk.Canvas(canvas_border, bg='#87CEEB', highlightthickness=0)
+        self.canvas.pack(fill='both', expand=True, padx=2, pady=2)
+        
+        # Add ocean decoration elements
+        self._add_ocean_decorations()
+    
+        # Feedback label - SpongeBob themed version
+        feedback_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')  # Use yellow background to ensure visibility
+        feedback_container.pack(fill='x', pady=10)
+        
+        # Feedback title decoration
+        feedback_title = tk.Label(
+            feedback_container,
+            text='💬 Feedback Zone 💬',
+            font=('Comic Sans MS', 10, 'bold'),
+            bg='#FFD700',
+            fg='#2C3E50'
+        )
+        feedback_title.pack(pady=(3, 0))
+        
+        self.feedback_label = tk.Label(
+            feedback_container, 
+            text='', 
+            font=('Comic Sans MS', 14, 'bold'), 
+            bg='#FFD700',  # Use yellow background to ensure visibility in all difficulties
+            fg='#2C3E50',
+            height=1
+        )
+        self.feedback_label.pack(fill='x', padx=10, pady=5)
+    
+        # Bottom decoration bar - SpongeBob theme
+        bottom_decor = tk.Frame(main_frame, bg='#FFD700', height=40, bd=2, relief='sunken')
+        bottom_decor.pack(side='bottom', fill='x', pady=(10, 0))
+        bottom_decor.pack_propagate(False)
+        
+        # Add SpongeBob theme decorations
+        decor_label = tk.Label(
+            bottom_decor,
+            text='🐙 🦀 🧽 🐠 ⭐ 🐚',
+            font=('Comic Sans MS', 14),
+            bg='#FFD700',
+            fg='#FF6B35'
+        )
+        decor_label.pack(expand=True, pady=8)
+    
+    def _add_ocean_decorations(self):
+        """Add ocean decoration elements"""
+        # Add bubble decorations
+        for i in range(8):
+            x = 30 + i * 80
+            y = 20 + (i % 3) * 15
+            self.canvas.create_oval(
+                x, y, x+8, y+8,
+                fill='', outline='#E0F6FF', width=1,
+                tags='decoration'
+            )
+        
+        # Add starfish decorations
+        for i in range(4):
+            x = 60 + i * 120
+            y = 40 + (i % 2) * 20
+            self.canvas.create_text(
+                x, y, text='⭐',
+                font=('Comic Sans MS', 10),
+                fill='#FFD700',
+                tags='decoration'
+            )
+        
+        # Add coral decorations
+        for i in range(3):
+            x = 50 + i * 150
+            y = 350  # Fixed at bottom
+            self.canvas.create_text(
+                x, y, text='🌿',
+                font=('Comic Sans MS', 12),
+                fill='#228B22',
+                tags='decoration'
+            )
+
+    def cancel_all_timers(self):
+        for timer_id in self._active_timers:
+            try:
+                self.after_cancel(timer_id)
+            except:
+                pass
+        self._active_timers = []
+        
+        if self.jellyfish_manager:
+            self.jellyfish_manager.stop_animations()
+
+    def return_to_map(self):
+        if messagebox.askyesno("Confirm", "Exit current level? Progress will be lost."):
+            self.cancel_all_timers()
+            self._game_active = False
+            self.controller.show_frame('PlayerInfoMapPage')
+
+    def reset_game(self):
+        self.cancel_all_timers()
+        self._game_active = True
+        self.question_count = 0
+        self.score = 0
+        self.lives = 3
+        
+        self.wrong_questions = []
+        self.current_question_data = None
+        
+        self.bg_color = BACKGROUND_COLORS.get(self.controller.selected_difficulty, 'white')
+        self.config(bg=self.bg_color)
+        self.question_label.config(bg=self.bg_color)
+        self.feedback_label.config(bg=self.bg_color)
+        
+        self.jellyfish_manager = JellyfishManager(self.canvas, self.controller.selected_difficulty)
+        
+        self.pb = ProblemBank(self.controller.selected_difficulty)
+        
+        for i, label in enumerate(self.lives_labels):
+            label.config(state='normal' if i < self.lives else 'disabled')
+    
+        self.next_question()
+        return True
+
+    def update_status(self):
+        self.score_label.config(text=f'Score: {self.score}')
+        
+        for i, label in enumerate(self.lives_labels):
+            label.config(state='normal' if i < self.lives else 'disabled')
+        
+        self.counter_label.config(text=f'Question: {self.question_count}/{QUESTIONS_PER_GAME}')
+
+    def next_question(self):
+        if not self._game_active:
+            return
+            
+        if self.question_count >= QUESTIONS_PER_GAME:
+            self.game_completed()
+            return
+            
+        self.question_count += 1
+        
+        self._answer_checked = False
+        
+        self.cancel_all_timers()
+        
+        # get new problem
+        problem, answer, options = self.pb.create_problem()
+        self.correct_answer = answer
+        self.options = options
+        
+        # save question data for review
+        self.current_question_data = {
+            'question': problem,
+            'correct_answer': answer,
+            'options': options,
+            'question_number': self.question_count,
+            'user_answer': None
+        }
+        
+        # update display
+        level_name = LEVEL_NAMES.get(self.controller.selected_difficulty, self.controller.selected_difficulty)
+        self.question_label.config(text=f"{level_name}\n\n{problem}")
+        self.feedback_label.config(text='')
+        self.update_status()
+        
+        self.create_jellyfish(options)
+        
+        # start timer with increased time
+        difficulty = self.controller.selected_difficulty
+        self.time_left = TIME_PER_QUESTION.get(difficulty, 60)
+        self.timer_label.config(text=f'Time: {self.time_left}s')
+        self.start_timer()
+    
+    def start_timer(self):
+        if not self._game_active:
+            return
+            
+        self.update_timer()
+
+    def update_timer(self):
+        if not self._game_active or not self.winfo_ismapped():
+            return
+        
+        if self.time_left <= 0:
+            self.handle_timeout()
+            return
+        
+        self.time_left -= 1
+        self.timer_label.config(text=f'Time: {self.time_left}s')
+        
+        if self._active_timers:
+            self.after_cancel(self._active_timers[0])
+        
+        timer_id = self.after(1000, self.update_timer)
+        self._active_timers = [timer_id]
+
+    def handle_timeout(self):
+        if not self._game_active:
+            return
+            
+        # play sound
+        try:
+            self.controller.sound_manager.play_wrong()
+        except:
+            pass
+        self.lives -= 1
+        
+        # save wrong answer
+        if self.current_question_data:
+            self.current_question_data['user_answer'] = 'No answer (timeout)'
+            self.wrong_questions.append(self.current_question_data.copy())
+        
+        # show correct answer
+        correct_answer = self.correct_answer
+        if isinstance(correct_answer, (int, float)):
+            correct_answer = str(correct_answer)
+        
+        self.feedback_label.config(text=f'Time up! The correct answer was {correct_answer}.', fg='#8B0000')
+        self.update_status()
+        
+        self.disable_jellyfish()
+        
+        # continue or end game
+        if self.lives <= 0:
+            self.after(2000, self.game_over)
+        else:
+            self.after(2000, self.next_question)
+
+    def create_jellyfish(self, options):
+        self.jellyfish = self.jellyfish_manager.create_jellyfish(options)
+        
+        for i in range(len(self.jellyfish)):
+            self.canvas.tag_bind(f'jelly_{i}', '<ButtonPress-1>', 
+                                lambda e, idx=i: self.jellyfish_manager.press_jellyfish(idx))
+            
+            self.canvas.tag_bind(f'jelly_{i}', '<ButtonRelease-1>', 
+                                lambda e, idx=i, opt=options[i]: self.handle_jellyfish_release(idx, opt))
+        
+        self.jellyfish_manager.animate()
+    
+    def handle_jellyfish_release(self, jelly_index, option):
+        self.jellyfish_manager.release_jellyfish(jelly_index)
+        self.check_answer(option)
+    
+    def disable_jellyfish(self):
+        if self.jellyfish_manager:
+            self.jellyfish_manager.disable_interaction()
+
+    def check_answer(self, selected):
+        # prevent double clicks
+        if hasattr(self, '_answer_checked') and self._answer_checked:
+            return
+        
+        self._answer_checked = True
+        self.disable_jellyfish()
+        
+        # save user's answer
+        if self.current_question_data:
+            self.current_question_data['user_answer'] = selected
+        
+        # check if answer is correct
+        if isinstance(self.correct_answer, tuple):
+            try:
+                parts = selected.split(',')
+                if len(parts) != 2:
+                    correct = False
+                else:
+                    selected_tuple = (float(parts[0]), float(parts[1]))
+                    correct = (selected_tuple == self.correct_answer or
+                              (selected_tuple[1], selected_tuple[0]) == self.correct_answer)
+            except:
+                correct = False
+        else:
+            try:
+                correct = abs(float(selected) - float(self.correct_answer)) < 0.01
+            except:
+                correct = False
+        
+        if correct:
+            self.handle_correct()
+        else:
+            self.handle_incorrect()
+
+    def handle_correct(self):
+        """Handle correct answer"""
+        # Try to play sound, but don't crash if it fails
+        try:
+            self.controller.sound_manager.play_correct()
+        except:
+            pass  # Just continue without sound
+        
+        difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
+        points = LEVEL_POINTS.get(difficulty, 10)
+        
+        self.score += points
+        self.feedback_label.config(text=f'+{points} points! Correct!', fg='#228B22')
+        self.update_status()
+        
+        self.after(1500, self.next_question)
+
+    def handle_incorrect(self):
+        """Handle incorrect answer"""
+        # Try to play sound, but don't crash if it fails
+        try:
+            self.controller.sound_manager.play_wrong()
+        except:
+            pass  # Just continue without sound
+        self.lives -= 1
+        
+        # Save wrong question
+        if self.current_question_data:
+            # Ensure user answer is saved
+            if self.current_question_data.get('user_answer') is None:
+                self.current_question_data['user_answer'] = 'No answer recorded'
+            self.wrong_questions.append(self.current_question_data.copy())
+        
+        # Show correct answer
+        correct_answer = self.correct_answer
+        if isinstance(correct_answer, (int, float)):
+            correct_answer = str(correct_answer)
+        
+        # User-friendly error messages with correct answer
+        incorrect_messages = [
+            f"Oops! The correct answer is {correct_answer}. Keep learning! 💪",
+            f"Not quite right. The answer is {correct_answer}. You're getting better! 🌟",
+            f"Close! The correct answer is {correct_answer}. Don't give up! ✨",
+            f"That's okay! The answer is {correct_answer}. Every mistake helps you learn! 🎯"
+        ]
+        
+        import random
+        message = random.choice(incorrect_messages)
+        self.feedback_label.config(text=message, fg='#8B0000')  # Dark red, more readable
+        self.update_status()
+        
+        if self.lives <= 0:
+            self.after(2000, self.game_over)  # Give more time to see correct answer
+        else:
+            self.after(2000, self.next_question)  # Give more time to see correct answer
+
+    def save_score_to_leaderboard(self):
+        """Save score to leaderboard without showing it"""
+        player_name = getattr(self.controller, 'player_name', 'Player')
+        difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
+        
+        # Save score to file
+        score_manager = ScoreManager()
+        score_manager.save_result(player_name, self.score, difficulty)
+        
+        # Save result to controller for highlighting
+        self.controller.last_score = {
+            'player': player_name,
+            'score': self.score,
+            'difficulty': difficulty
+        }
+    
+    def save_and_show_leaderboard(self):
+        """Save score and show leaderboard"""
+        # Save the score first
+        self.save_score_to_leaderboard()
+        
+        # Then show the leaderboard
+        self.controller.show_frame('LeaderboardPage')
+    
+    def show_wrong_questions_summary(self):
+        """Show wrong questions summary"""
+        if not self.wrong_questions:
+            messagebox.showinfo("No Wrong Questions", "Great job! You didn't get any questions wrong!")
+            return
+        
+        # Create wrong questions summary window - larger window
+        summary_window = tk.Toplevel()
+        summary_window.title("📝 Wrong Questions Review")
+        summary_window.geometry("1200x800")  # Larger window size
+        summary_window.configure(bg='#E8F4FD')
+        summary_window.resizable(True, True)
+        
+        # Get screen dimensions and center display
+        screen_width = summary_window.winfo_screenwidth()
+        screen_height = summary_window.winfo_screenheight()
+        x = (screen_width - 1200) // 2
+        y = (screen_height - 800) // 2
+        summary_window.geometry(f"1200x800+{x}+{y}")
+        
+        # Center display
+        summary_window.transient(self)
+        summary_window.grab_set()
+        
+        # Main frame
+        main_frame = tk.Frame(summary_window, bg='#E8F4FD')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Title
+        title_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        title_frame.pack(fill='x', pady=(0, 15))
+        
+        tk.Label(
+            title_frame,
+            text="📝 Questions You Got Wrong - Review & Learn!",
+            font=('Comic Sans MS', 18, 'bold'),
+            bg='#E8F4FD',
+            fg='#2C3E50'
+        ).pack()
+        
+        # Statistics
+        stats_frame = tk.Frame(title_frame, bg='#E8F4FD')
+        stats_frame.pack(pady=5)
+        
+        total_questions = QUESTIONS_PER_GAME
+        wrong_count = len(self.wrong_questions)
+        correct_count = total_questions - wrong_count
+        accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+        
+        tk.Label(
+            stats_frame,
+            text=f"📊 Game Statistics:",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#E8F4FD',
+            fg='#2C3E50'
+        ).pack()
+        
+        tk.Label(
+            stats_frame,
+            text=f"✅ Correct: {correct_count} | ❌ Wrong: {wrong_count} | 📈 Accuracy: {accuracy:.1f}%",
+            font=('Comic Sans MS', 11),
+            bg='#E8F4FD',
+            fg='#006994'
+        ).pack(pady=2)
+        
+        tk.Label(
+            stats_frame,
+            text="📝 Review your mistakes below and learn from them!",
+            font=('Comic Sans MS', 10),
+            bg='#E8F4FD',
+            fg='#666666'
+        ).pack(pady=2)
+        
+        # Create scrollable area
+        canvas = tk.Canvas(main_frame, bg='#E8F4FD', highlightthickness=0)
+        scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#E8F4FD')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Set canvas width to fit content
+        canvas.configure(width=1150)  # Set fixed width
+        
+        # Display each wrong question
+        for i, wrong_q in enumerate(self.wrong_questions, 1):
+            question_frame = tk.Frame(scrollable_frame, bg='#FFE4E1', bd=2, relief='raised')
+            question_frame.pack(fill='x', pady=10, padx=10)
+            
+            # Question number
+            tk.Label(
+                question_frame,
+                text=f"Question #{wrong_q['question_number']}",
+                font=('Comic Sans MS', 14, 'bold'),
+                bg='#FFE4E1',
+                fg='#8B0000'
+            ).pack(anchor='w', padx=15, pady=(15, 10))
+            
+            # Question content
+            tk.Label(
+                question_frame,
+                text=wrong_q['question'],
+                font=('Comic Sans MS', 12),
+                bg='#FFE4E1',
+                fg='#2C3E50',
+                wraplength=1000,  # Wider text wrapping
+                justify='left'
+            ).pack(anchor='w', padx=15, pady=8)
+            
+            # Options
+            options_frame = tk.Frame(question_frame, bg='#FFE4E1')
+            options_frame.pack(anchor='w', padx=15, pady=8)
+            
+            tk.Label(
+                options_frame,
+                text="📋 All Options:",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#FFE4E1',
+                fg='#2C3E50'
+            ).pack(anchor='w')
+            
+            for j, option in enumerate(wrong_q['options']):
+                option_text = f"{chr(65+j)}. {option}"
+                # Highlight user's wrong answer
+                if wrong_q.get('user_answer') == option:
+                    bg_color = '#FFB6C1'  # Light red background
+                    fg_color = '#8B0000'  # Dark red text
+                    option_text += " ❌ (Your Answer)"
+                else:
+                    bg_color = '#FFE4E1'
+                    fg_color = '#2C3E50'
+                
+                option_label = tk.Label(
+                    options_frame,
+                    text=option_text,
+                    font=('Comic Sans MS', 11),
+                    bg=bg_color,
+                    fg=fg_color,
+                    relief='solid',
+                    bd=1,
+                    padx=10,
+                    pady=2
+                )
+                option_label.pack(anchor='w', padx=25, pady=2, fill='x')
+            
+            # Answer comparison
+            answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
+            answer_frame.pack(anchor='w', padx=15, pady=10, fill='x')
+            
+            # User answer
+            user_answer = wrong_q.get('user_answer', 'No answer')
+            if isinstance(user_answer, (int, float)):
+                user_answer = str(user_answer)
+            
+            tk.Label(
+                answer_frame,
+                text=f"❌ Your Answer: {user_answer}",
+                font=('Comic Sans MS', 12, 'bold'),
+                bg='#FFB6C1',
+                fg='#8B0000',
+                relief='solid',
+                bd=1,
+                padx=10,
+                pady=5
+            ).pack(side='left', padx=(0, 10))
+            
+            # Correct answer
+            correct_answer = wrong_q['correct_answer']
+            if isinstance(correct_answer, (int, float)):
+                correct_answer = str(correct_answer)
+            
+            tk.Label(
+                answer_frame,
+                text=f"✅ Correct Answer: {correct_answer}",
+                font=('Comic Sans MS', 12, 'bold'),
+                bg='#90EE90',
+                fg='#228B22',
+                relief='solid',
+                bd=1,
+                padx=10,
+                pady=5
+            ).pack(side='left')
+            
+            # Add separator line
+            separator = tk.Frame(question_frame, height=2, bg='#8B0000')
+            separator.pack(fill='x', padx=15, pady=10)
+        
+        # Bottom buttons
+        button_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        button_frame.pack(fill='x', pady=(15, 0))
+        
+        tk.Button(
+            button_frame,
+            text="🏠 Back to Menu",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#FF9800',
+            fg='white',
+            padx=15,
+            pady=8,
+            command=lambda: [summary_window.destroy(), self.controller.show_frame('StartPage')]
+        ).pack(side='left', padx=5)
+        
+        tk.Button(
+            button_frame,
+            text="🏆 View Leaderboard",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#2196F3',
+            fg='white',
+            padx=15,
+            pady=8,
+            command=lambda: [summary_window.destroy(), self.save_and_show_leaderboard()]
+        ).pack(side='left', padx=5)
+        
+        tk.Button(
+            button_frame,
+            text="🎮 Play Again",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#4CAF50',
+            fg='white',
+            padx=15,
+            pady=8,
+            command=lambda: [summary_window.destroy(), self.reset_game(), self.controller.show_frame('GamePage')]
+        ).pack(side='right', padx=5)
+        
+        # Layout scrollable area
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Bind mouse wheel
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Unbind wheel when window closes
+        def on_closing():
+            canvas.unbind_all("<MouseWheel>")
+            summary_window.destroy()
+        
+        summary_window.protocol("WM_DELETE_WINDOW", on_closing)
+
+    def game_completed(self):
+        """Game completed"""
+        self._game_active = False
+        self.cancel_all_timers()
+        
+        player_name = getattr(self.controller, 'player_name', 'Player')
+        difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
+        
+        # Automatically save the score when game is completed
+        self.save_score_to_leaderboard()
+        
+        # User-friendly completion messages
+        completion_messages = [
+            f"🎉 Amazing job, {player_name}! You're a math superstar! 🌟",
+            f"🏆 Fantastic work! You've conquered the {difficulty} challenge!",
+            f"✨ Incredible! You've mastered the {difficulty} level!",
+            f"🎊 Outstanding performance! You're ready for the next challenge!"
+        ]
+        
+        import random
+        message = random.choice(completion_messages)
+        
+        # Use custom dialog to provide more options
+        from tkinter import simpledialog
+        
+        # Create custom dialog - larger window
+        dialog = tk.Toplevel()
+        dialog.title("🎉 Level Complete! 🎉")
+        dialog.geometry("1000x700")  # Larger window size
+        dialog.configure(bg='#E8F4FD')
+        dialog.resizable(True, True)
+        
+        # Get screen dimensions and center display
+        screen_width = dialog.winfo_screenwidth()
+        screen_height = dialog.winfo_screenheight()
+        x = (screen_width - 1000) // 2
+        y = (screen_height - 700) // 2
+        dialog.geometry(f"1000x700+{x}+{y}")
+        
+        # Center display
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Main frame
+        main_frame = tk.Frame(dialog, bg='#E8F4FD')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Button frame - moved to top
+        button_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        button_frame.pack(fill='x', pady=(0, 15))
+        
+        # Button instructions
+        tk.Label(
+            button_frame,
+            text="📋 Action Buttons:",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#E8F4FD',
+            fg='#2C3E50'
+        ).pack(pady=(0, 5))
+        
+        play_again_var = tk.StringVar(value="")
+        
+        def on_play_again():
+            play_again_var.set("play_again")
+            dialog.destroy()
+        
+        def on_back_menu():
+            play_again_var.set("back_menu")
+            dialog.destroy()
+        
+        def on_leaderboard():
+            play_again_var.set("leaderboard")
+            dialog.destroy()
+        
+        # Button group
+        button_group = tk.Frame(button_frame, bg='#E8F4FD')
+        button_group.pack(expand=True)
+        
+        tk.Button(
+            button_group,
+            text="🎮 Play Again",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#4CAF50',
+            fg='white',
+            padx=12,
+            pady=6,
+            command=on_play_again
+        ).pack(side='left', padx=10)
+        
+        tk.Button(
+            button_group,
+            text="🗺️ Map Page",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#FF9800',
+                fg='white',
+            padx=12,
+            pady=6,
+            command=on_back_menu
+        ).pack(side='left', padx=10)
+        
+        tk.Button(
+            button_group,
+            text="🏆 Leaderboard",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#2196F3',
+            fg='white',
+            padx=12,
+            pady=6,
+            command=on_leaderboard
+        ).pack(side='left', padx=10)
+        
+        # Add Review Questions button if there are wrong questions
+        if self.wrong_questions:
+            tk.Button(
+                button_group,
+                text="📝 Review Questions",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#9C27B0',
+                fg='white',
+                padx=12,
+                pady=6,
+                command=self.show_questions_summary
+            ).pack(side='left', padx=10)
+        
+        # Title and statistics - prettier layout
+        header_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        header_frame.pack(fill='x', pady=(0, 15))
+        
+        # Decorative border
+        title_border = tk.Frame(header_frame, bg='#FFD700', bd=3, relief='raised')
+        title_border.pack(fill='x', pady=(0, 15))
+        
+        title_content = tk.Frame(title_border, bg='#FFF8DC', bd=2, relief='sunken')
+        title_content.pack(fill='x', padx=5, pady=5)
+        
+        # Celebration decorations
+        celebration_frame = tk.Frame(title_content, bg='#FFF8DC')
+        celebration_frame.pack(pady=(5, 0))
+        
+        tk.Label(
+            celebration_frame,
+            text="🎉 🏆 🎊",
+            font=('Comic Sans MS', 20),
+            bg='#FFF8DC',
+            fg='#FFD700'
+        ).pack()
+        
+        tk.Label(
+            title_content,
+            text=message,
+            font=('Comic Sans MS', 16, 'bold'),
+            bg='#FFF8DC',
+            fg='#2C3E50',
+            wraplength=900
+        ).pack(pady=10)
+        
+        # Score and difficulty info - prettier display
+        stats_border = tk.Frame(header_frame, bg='#87CEEB', bd=2, relief='raised')
+        stats_border.pack(fill='x', pady=10)
+        
+        stats_content = tk.Frame(stats_border, bg='#E0F6FF', bd=1, relief='sunken')
+        stats_content.pack(fill='x', padx=3, pady=3)
+        
+        tk.Label(
+            stats_content,
+            text=f"🎯 Final Score: {self.score} points",
+            font=('Comic Sans MS', 14, 'bold'),
+            bg='#E0F6FF',
+            fg='#006994'
+        ).pack(pady=5)
+        
+        tk.Label(
+            stats_content,
+            text=f"🎮 Difficulty: {difficulty}",
+            font=('Comic Sans MS', 12),
+            bg='#E0F6FF',
+            fg='#006994'
+        ).pack(pady=2)
+        
+        # Show leaderboard info
+        leaderboard_text, leaderboard_color = self._get_leaderboard_info(player_name, self.score)
+        tk.Label(
+            stats_content,
+            text=leaderboard_text,
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#E0F6FF',
+            fg=leaderboard_color
+        ).pack(pady=2)
+        
+        # Show wrong questions statistics - prettier display
+        if self.wrong_questions:
+            wrong_count = len(self.wrong_questions)
+            total_questions = QUESTIONS_PER_GAME
+            correct_count = total_questions - wrong_count
+            accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+            
+            # Performance statistics border
+            perf_border = tk.Frame(header_frame, bg='#98FB98', bd=2, relief='raised')
+            perf_border.pack(fill='x', pady=10)
+            
+            perf_content = tk.Frame(perf_border, bg='#F0FFF0', bd=1, relief='sunken')
+            perf_content.pack(fill='x', padx=3, pady=3)
+            
+            tk.Label(
+                perf_content,
+                text="📊 Performance Summary",
+                font=('Comic Sans MS', 13, 'bold'),
+                bg='#F0FFF0',
+                fg='#228B22'
+            ).pack(pady=5)
+            
+            tk.Label(
+                perf_content,
+                text=f"✅ Correct: {correct_count} | ❌ Wrong: {wrong_count} | 📈 Accuracy: {accuracy:.1f}%",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#F0FFF0',
+                fg='#2C3E50'
+            ).pack(pady=3)
+        
+        # 错误问题显示区域
+        if self.wrong_questions:
+            # 创建滚动区域显示错误问题
+            canvas = tk.Canvas(main_frame, bg='#E8F4FD', highlightthickness=0, height=400)
+            scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+            scrollable_frame = tk.Frame(canvas, bg='#E8F4FD')
+            
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+            
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
+            # 错误问题标题
+            tk.Label(
+                scrollable_frame,
+                text="📝 Wrong Questions Summary:",
+                font=('Comic Sans MS', 14, 'bold'),
+                bg='#E8F4FD',
+                fg='#2C3E50'
+            ).pack(pady=(0, 10))
+            
+            # 显示每个错误问题
+            for i, wrong_q in enumerate(self.wrong_questions, 1):
+                # Question container with border
+                question_frame = tk.Frame(scrollable_frame, bg='#FFE4E1', bd=2, relief='raised')
+                question_frame.pack(fill='x', pady=5, padx=10)
+                
+                # 问题编号
+                tk.Label(
+                    question_frame,
+                    text=f"Question #{wrong_q['question_number']}",
+                    font=('Comic Sans MS', 12, 'bold'),
+                    bg='#FFE4E1',
+                    fg='#8B0000'
+                ).pack(anchor='w', padx=10, pady=(10, 5))
+                
+                # 问题内容
+                tk.Label(
+                    question_frame,
+                    text=wrong_q['question'],
+                    font=('Comic Sans MS', 11),
+                    bg='#FFE4E1',
+                    fg='#2C3E50',
+                    wraplength=800,
+                    justify='left'
+                ).pack(anchor='w', padx=10, pady=5)
+                
+                # 用户答案和正确答案
+                answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
+                answer_frame.pack(anchor='w', padx=10, pady=5, fill='x')
+                
+                user_answer = wrong_q.get('user_answer', 'No answer')
+                if isinstance(user_answer, (int, float)):
+                    user_answer = str(user_answer)
+                
+                correct_answer = wrong_q['correct_answer']
+                if isinstance(correct_answer, (int, float)):
+                    correct_answer = str(correct_answer)
+                
+                tk.Label(
+                    answer_frame,
+                    text=f"❌ Your Answer: {user_answer}",
+                    font=('Comic Sans MS', 11, 'bold'),
+                    bg='#FFB6C1',
+                    fg='#8B0000',
+                    relief='solid',
+                    bd=1,
+                    padx=8,
+                    pady=3
+                ).pack(side='left', padx=(0, 10))
+                
+                tk.Label(
+                    answer_frame,
+                    text=f"✅ Correct: {correct_answer}",
+                    font=('Comic Sans MS', 11, 'bold'),
+                    bg='#90EE90',
+                    fg='#228B22',
+                    relief='solid',
+                    bd=1,
+                    padx=8,
+                    pady=3
+                ).pack(side='left')
+            
+            # 布局滚动区域
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+        
+        # 提示用户查看问题总结
+        if self.wrong_questions:
+            hint_frame = tk.Frame(main_frame, bg='#FFFACD', bd=2, relief='raised')
+            hint_frame.pack(fill='x', pady=10)
+            
+            tk.Label(
+                hint_frame,
+                text="💡 Tip: Click '📝 Review Questions' button above to see detailed review of your mistakes!",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#FFFACD',
+                fg='#8B4513'
+            ).pack(pady=8)
+        
+        # 等待用户选择
+        
+        # 等待用户选择
+        dialog.wait_window()
+        result = play_again_var.get()
+        
+        if result == "play_again":
+            # 直接重新开始相同难度的游戏
+            self.reset_game()
+            self.controller.show_frame('GamePage')
+        elif result == "leaderboard":
+            # 显示排行榜
+            self.save_and_show_leaderboard()
+        elif result == "back_menu":
+            # 返回地图页面，保持玩家信息
+            self.reset_game()
+            self.controller.show_frame('PlayerInfoMapPage')
+        else:  # 默认返回菜单
+            # 返回菜单并重置玩家信息
+            self.reset_game()
+            player_info_page = self.controller.page_frames['PlayerInfoMapPage']
+            player_info_page.reset_player_info()
+            self.controller.show_frame('PlayerInfoMapPage')
+
+    def game_over(self):
+        """游戏结束"""
+        self._game_active = False
+        self.cancel_all_timers()
+        
+        player_name = getattr(self.controller, 'player_name', 'Player')
+        
+        # Automatically save the score when game is over
+        self.save_score_to_leaderboard()
+        
+        # 用户友好的游戏结束消息
+        game_over_messages = [
+            f"💪 Don't worry, {player_name}! Every great mathematician started somewhere!",
+            f"🌟 Keep practicing, {player_name}! You're getting better with each try!",
+            f"🎯 Nice effort, {player_name}! Math is a journey, not a destination!",
+            f"✨ Great attempt, {player_name}! Learning from mistakes makes you stronger!"
+        ]
+        
+        import random
+        message = random.choice(game_over_messages)
+        
+        # 根据当前难度提供合适的建议
+        current_difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
+        if current_difficulty == 'Easy':
+            tip = "💡 Tip: Practice makes perfect! Try again to improve your score!"
+        elif current_difficulty == 'Medium':
+            tip = "💡 Tip: You're doing great! Try the Easy level to build confidence, or try Medium again!"
+        else:  # Hard
+            tip = "💡 Tip: Hard level is challenging! Try Medium or Easy to practice first!"
+        
+        # 创建自定义对话框 - 更大的窗口
+        dialog = tk.Toplevel()
+        dialog.title("🎮 Game Over - But Don't Give Up! 🎮")
+        dialog.geometry("1000x700")  # 更大的窗口尺寸
+        dialog.configure(bg='#E8F4FD')
+        dialog.resizable(True, True)
+        
+        # 获取屏幕尺寸并居中显示
+        screen_width = dialog.winfo_screenwidth()
+        screen_height = dialog.winfo_screenheight()
+        x = (screen_width - 1000) // 2
+        y = (screen_height - 700) // 2
+        dialog.geometry(f"1000x700+{x}+{y}")
+        
+        # 居中显示
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # 主框架
+        main_frame = tk.Frame(dialog, bg='#E8F4FD')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # 标题和统计信息 - 更漂亮的布局
+        header_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        header_frame.pack(fill='x', pady=(0, 15))
+        
+        # 装饰性边框
+        title_border = tk.Frame(header_frame, bg='#FFB6C1', bd=3, relief='raised')
+        title_border.pack(fill='x', pady=(0, 15))
+        
+        title_content = tk.Frame(title_border, bg='#FFF0F5', bd=2, relief='sunken')
+        title_content.pack(fill='x', padx=5, pady=5)
+        
+        # 鼓励装饰
+        encouragement_frame = tk.Frame(title_content, bg='#FFF0F5')
+        encouragement_frame.pack(pady=(5, 0))
+        
+        tk.Label(
+            encouragement_frame,
+            text="💪 🌟 🎯",
+            font=('Comic Sans MS', 20),
+            bg='#FFF0F5',
+            fg='#FFB6C1'
+        ).pack()
+        
+        tk.Label(
+            title_content,
+            text=message,
+            font=('Comic Sans MS', 16, 'bold'),
+            bg='#FFF0F5',
+            fg='#2C3E50',
+            wraplength=900
+        ).pack(pady=10)
+        
+        # 分数和难度信息 - 更漂亮的显示
+        stats_border = tk.Frame(header_frame, bg='#87CEEB', bd=2, relief='raised')
+        stats_border.pack(fill='x', pady=10)
+        
+        stats_content = tk.Frame(stats_border, bg='#E0F6FF', bd=1, relief='sunken')
+        stats_content.pack(fill='x', padx=3, pady=3)
+        
+        tk.Label(
+            stats_content,
+            text=f"🎯 Final Score: {self.score} points",
+            font=('Comic Sans MS', 14, 'bold'),
+            bg='#E0F6FF',
+            fg='#006994'
+        ).pack(pady=5)
+        
+        tk.Label(
+            stats_content,
+            text=f"🎮 Difficulty: {current_difficulty}",
+            font=('Comic Sans MS', 12),
+            bg='#E0F6FF',
+            fg='#006994'
+        ).pack(pady=2)
+        
+        # 显示排行榜信息
+        leaderboard_text, leaderboard_color = self._get_leaderboard_info(player_name, self.score)
+        tk.Label(
+            stats_content,
+            text=leaderboard_text,
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#E0F6FF',
+            fg=leaderboard_color
+        ).pack(pady=2)
+        
+        # 提示信息 - 更漂亮的显示
+        tip_border = tk.Frame(header_frame, bg='#FFE4B5', bd=2, relief='raised')
+        tip_border.pack(fill='x', pady=10)
+        
+        tip_content = tk.Frame(tip_border, bg='#FFF8DC', bd=1, relief='sunken')
+        tip_content.pack(fill='x', padx=3, pady=3)
+        
+        tk.Label(
+            tip_content,
+            text="💡 Learning Tip",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#FFF8DC',
+            fg='#DAA520'
+        ).pack(pady=3)
+        
+        tk.Label(
+            tip_content,
+            text=tip,
+            font=('Comic Sans MS', 11),
+            bg='#FFF8DC',
+            fg='#2C3E50',
+            wraplength=900
+        ).pack(pady=3)
+        
+        # 显示错误问题统计 - 更漂亮的显示
+        if self.wrong_questions:
+            wrong_count = len(self.wrong_questions)
+            total_questions = self.question_count
+            correct_count = total_questions - wrong_count
+            accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+            
+            # 性能统计边框
+            perf_border = tk.Frame(header_frame, bg='#98FB98', bd=2, relief='raised')
+            perf_border.pack(fill='x', pady=10)
+            
+            perf_content = tk.Frame(perf_border, bg='#F0FFF0', bd=1, relief='sunken')
+            perf_content.pack(fill='x', padx=3, pady=3)
+            
+            tk.Label(
+                perf_content,
+                text="📊 Performance Summary",
+                font=('Comic Sans MS', 13, 'bold'),
+                bg='#F0FFF0',
+                fg='#228B22'
+            ).pack(pady=5)
+            
+            tk.Label(
+                perf_content,
+                text=f"✅ Correct: {correct_count} | ❌ Wrong: {wrong_count} | 📈 Accuracy: {accuracy:.1f}%",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#F0FFF0',
+                fg='#2C3E50'
+            ).pack(pady=3)
+        
+        # 提示用户查看问题总结
+        if self.wrong_questions:
+            hint_frame = tk.Frame(main_frame, bg='#FFFACD', bd=2, relief='raised')
+            hint_frame.pack(fill='x', pady=10)
+            
+            tk.Label(
+                hint_frame,
+                text="💡 Tip: Click '📝 Review Questions' button above to see detailed review of your mistakes!",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#FFFACD',
+                fg='#8B4513'
+            ).pack(pady=8)
+        
+        # 按钮框架
+        button_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        button_frame.pack(fill='x', pady=(15, 0))
+        
+        choice_var = tk.StringVar(value="")
+        
+        def on_try_again():
+            choice_var.set("try_again")
+            dialog.destroy()
+        
+        def on_back_menu():
+            choice_var.set("back_menu")
+            dialog.destroy()
+        
+        def on_leaderboard():
+            choice_var.set("leaderboard")
+            dialog.destroy()
+        
+        # 按钮组
+        button_group = tk.Frame(button_frame, bg='#E8F4FD')
+        button_group.pack(expand=True)
+        
+        tk.Button(
+            button_group,
+            text="🎮 Try Again",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#4CAF50',
+            fg='white',
+            padx=12,
+            pady=6,
+            command=on_try_again
+        ).pack(side='left', padx=10)
+        
+        tk.Button(
+            button_group,
+            text="🗺️ Map Page",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#FF9800',
+            fg='white',
+            padx=12,
+            pady=6,
+            command=on_back_menu
+        ).pack(side='left', padx=10)
+        
+        tk.Button(
+            button_group,
+            text="🏆 Leaderboard",
+            font=('Comic Sans MS', 11, 'bold'),
+            bg='#2196F3',
+            fg='white',
+            padx=12,
+            pady=6,
+            command=on_leaderboard
+        ).pack(side='left', padx=10)
+        
+        # Add Review Questions button if there are wrong questions
+        if self.wrong_questions:
+            tk.Button(
+                button_group,
+                text="📝 Review Questions",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#9C27B0',
+                fg='white',
+                padx=12,
+                pady=6,
+                command=self.show_questions_summary
+            ).pack(side='left', padx=10)
+        
+        # 等待用户选择
+        dialog.wait_window()
+        result = choice_var.get()
+        
+        if result == "try_again":
+            # 直接重新开始相同难度的游戏
+            self.reset_game()
+            self.controller.show_frame('GamePage')
+        elif result == "leaderboard":
+            # 显示排行榜
+            self.save_and_show_leaderboard()
+        elif result == "back_menu":
+            # 返回地图页面，保持玩家信息
+            self.reset_game()
+            self.controller.show_frame('PlayerInfoMapPage')
+        else:  # 默认返回菜单
+            # 返回菜单并重置玩家信息
+            self.reset_game()
+            player_info_page = self.controller.page_frames['PlayerInfoMapPage']
+            player_info_page.reset_player_info()
+            self.controller.show_frame('PlayerInfoMapPage')
+    
+    def _get_leaderboard_info(self, player_name, score):
+        """Get leaderboard ranking information for the player"""
+        try:
+            from utils import ScoreManager
+            score_manager = ScoreManager()
+            high_scores = score_manager.get_records()
+            
+            # Find player's rank for current score
+            player_rank = None
+            player_on_leaderboard = False
+            
+            # Check if player is on leaderboard with current score
+            for i, score_entry in enumerate(high_scores, 1):
+                if score_entry.get('player') == player_name and score_entry.get('score') == score:
+                    player_rank = i
+                    player_on_leaderboard = True
+                    break
+            
+            # If not found with current score, check if player exists on leaderboard with different score
+            if not player_on_leaderboard:
+                for score_entry in high_scores:
+                    if score_entry.get('player') == player_name:
+                        player_on_leaderboard = True
+                        break
+            
+            if player_rank:
+                # Player is on leaderboard with current score
+                if player_rank == 1:
+                    return f"🏆 {player_name}, you're #1 on the leaderboard! Check the leaderboard to see your achievement!", '#FFD700'
+                elif player_rank == 2:
+                    return f"🥈 {player_name}, you're #2 on the leaderboard! Check the leaderboard to see how close you are to #1!", '#C0C0C0'
+                elif player_rank == 3:
+                    return f"🥉 {player_name}, you're #3 on the leaderboard! Check the leaderboard to see your ranking!", '#CD7F32'
+                else:
+                    return f"📊 {player_name}, you're #{player_rank} on the leaderboard! Check the leaderboard to see your position!", '#006994'
+            elif player_on_leaderboard:
+                # Player is on leaderboard but with a different (higher) score
+                return f"📊 {player_name}, you're already on the leaderboard! Check the leaderboard to see your best score!", '#228B22'
+            else:
+                # Player is not on leaderboard at all
+                if len(high_scores) > 0:
+                    lowest_score = min(score_entry.get('score', 0) for score_entry in high_scores)
+                    if score < lowest_score:
+                        return f"💪 {player_name}, check the leaderboard to see what score you need to beat! Keep practicing!", '#FF6B6B'
+                    else:
+                        return f"🎯 {player_name}, you're close to making the leaderboard! Check it to see how close you are!", '#FFA500'
+                else:
+                    return f"🎯 {player_name}, you're the first player! Check the leaderboard to see your score!", '#006994'
+        except Exception as e:
+            return f"📊 {player_name}, check the leaderboard to see how you rank!", '#006994'
+
+    def show_questions_summary(self):
+        """Show wrong questions summary in a separate window"""
+        if not self.wrong_questions:
+            return
+        
+        # Create a new window for questions summary
+        summary_window = tk.Toplevel()
+        summary_window.title("📝 Questions Summary - Review Your Mistakes")
+        summary_window.geometry("900x600")
+        summary_window.configure(bg='#E8F4FD')
+        summary_window.resizable(True, True)
+        
+        # Center the window
+        screen_width = summary_window.winfo_screenwidth()
+        screen_height = summary_window.winfo_screenheight()
+        x = (screen_width - 900) // 2
+        y = (screen_height - 600) // 2
+        summary_window.geometry(f"900x600+{x}+{y}")
+        
+        summary_window.transient(self)
+        summary_window.grab_set()
+        
+        # Main frame
+        main_frame = tk.Frame(summary_window, bg='#E8F4FD')
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Header
+        header_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        header_frame.pack(fill='x', pady=(0, 15))
+        
+        # Title with decorative border
+        title_border = tk.Frame(header_frame, bg='#FF6B6B', bd=3, relief='raised')
+        title_border.pack(fill='x', pady=(0, 15))
+        
+        title_content = tk.Frame(title_border, bg='#FFE4E1', bd=2, relief='sunken')
+        title_content.pack(fill='x', padx=5, pady=5)
+        
+        tk.Label(
+            title_content,
+            text="📚 Learning Review",
+            font=('Comic Sans MS', 18, 'bold'),
+            bg='#FFE4E1',
+            fg='#8B0000'
+        ).pack(pady=5)
+        
+        tk.Label(
+            title_content,
+            text="Review the questions you answered incorrectly to improve your skills!",
+            font=('Comic Sans MS', 12),
+            bg='#FFE4E1',
+            fg='#2C3E50',
+            wraplength=800
+        ).pack(pady=5)
+        
+        # Statistics
+        wrong_count = len(self.wrong_questions)
+        total_questions = QUESTIONS_PER_GAME
+        correct_count = total_questions - wrong_count
+        accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+        
+        stats_frame = tk.Frame(header_frame, bg='#87CEEB', bd=2, relief='raised')
+        stats_frame.pack(fill='x', pady=10)
+        
+        stats_content = tk.Frame(stats_frame, bg='#E0F6FF', bd=1, relief='sunken')
+        stats_content.pack(fill='x', padx=3, pady=3)
+        
+        tk.Label(
+            stats_content,
+            text=f"📊 Performance: {correct_count} Correct | {wrong_count} Wrong | {accuracy:.1f}% Accuracy",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#E0F6FF',
+            fg='#006994'
+        ).pack(pady=5)
+        
+        # Questions display area
+        questions_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        questions_frame.pack(fill='both', expand=True)
+        
+        # Create scrollable canvas for questions
+        canvas = tk.Canvas(questions_frame, bg='#E8F4FD', highlightthickness=0)
+        scrollbar = tk.Scrollbar(questions_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#E8F4FD')
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Mouse wheel scrolling
+        def _on_mousewheel(event):
+            try:
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except tk.TclError:
+                # Canvas was destroyed, ignore the error
+                pass
+        
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Clean up binding when window is destroyed
+        def on_window_destroy():
+            try:
+                canvas.unbind_all("<MouseWheel>")
+            except:
+                pass
+        
+        summary_window.protocol("WM_DELETE_WINDOW", on_window_destroy)
+        
+        # Display each wrong question
+        for i, wrong_q in enumerate(self.wrong_questions, 1):
+            # Question container with border
+            question_frame = tk.Frame(scrollable_frame, bg='#FFE4E1', bd=2, relief='raised')
+            question_frame.pack(fill='x', pady=5, padx=5)
+            
+            # Question number and text
+            tk.Label(
+                question_frame,
+                text=f"Question #{wrong_q['question_number']}",
+                font=('Comic Sans MS', 12, 'bold'),
+                bg='#FFE4E1',
+                fg='#8B0000'
+            ).pack(anchor='w', padx=10, pady=(10, 5))
+            
+            tk.Label(
+                question_frame,
+                text=wrong_q['question'],
+                font=('Comic Sans MS', 11),
+                bg='#FFE4E1',
+                fg='#2C3E50',
+                wraplength=800,
+                justify='left'
+            ).pack(anchor='w', padx=10, pady=5)
+            
+            # User answer and correct answer
+            answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
+            answer_frame.pack(anchor='w', padx=10, pady=5, fill='x')
+            
+            user_answer = wrong_q.get('user_answer', 'No answer')
+            if isinstance(user_answer, (int, float)):
+                user_answer = str(user_answer)
+            
+            correct_answer = wrong_q['correct_answer']
+            if isinstance(correct_answer, (int, float)):
+                correct_answer = str(correct_answer)
+            
+            tk.Label(
+                answer_frame,
+                text=f"❌ Your Answer: {user_answer}",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#FFB6C1',
+                fg='#8B0000',
+                relief='solid',
+                bd=1,
+                padx=8,
+                pady=3
+            ).pack(side='left', padx=(0, 10))
+            
+            tk.Label(
+                answer_frame,
+                text=f"✅ Correct: {correct_answer}",
+                font=('Comic Sans MS', 11, 'bold'),
+                bg='#90EE90',
+                fg='#228B22',
+                relief='solid',
+                bd=1,
+                padx=8,
+                pady=3
+            ).pack(side='left')
+        
+        # Layout scrollable area
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Close button
+        button_frame = tk.Frame(main_frame, bg='#E8F4FD')
+        button_frame.pack(fill='x', pady=(15, 0))
+        
+        def close_window():
+            try:
+                canvas.unbind_all("<MouseWheel>")
+            except:
+                pass
+            summary_window.destroy()
+        
+        tk.Button(
+            button_frame,
+            text="✅ Got it! Close",
+            font=('Comic Sans MS', 12, 'bold'),
+            bg='#4CAF50',
+            fg='white',
+            padx=20,
+            pady=8,
+            command=close_window
+        ).pack()
+        
+        # Focus on the window
+        summary_window.focus_set()
+        summary_window.wait_window()
