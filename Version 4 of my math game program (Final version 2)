@@ -128,4 +128,18 @@ def game_completed(self):
     
     # Add leaderboard ranking info
     leaderboard_text, color = self._get_leaderboard_info(player_name, self.score)
+ 
     tk.Label(..., text=leaderboard_text, fg=color).pack()
+
+Improved Answer Feedback
+
+def handle_incorrect(self):
+    # Show correct answer
+    correct_answer = str(self.correct_answer)
+    
++   incorrect_messages = [
++       f"Oops! The correct answer is {correct_answer}. Keep learning! 💪",
++       ...  # 3 other encouraging messages
++   ]
++   message = random.choice(incorrect_messages)
++   self.feedback_label.config(text=message, fg='#8B0000')
