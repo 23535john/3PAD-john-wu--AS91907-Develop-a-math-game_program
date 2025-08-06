@@ -1,4 +1,6 @@
 # 3PAD-john-wu--AS91907-Develop-a-math-game_program
+This is only for educational use only can not use this program for commcial or any public sources
+
 Spongebob theme
 # 🧽 SpongeBob Jellyfish Catcher: Math Adventure
 
