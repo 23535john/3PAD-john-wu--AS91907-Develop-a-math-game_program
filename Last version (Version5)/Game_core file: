@@ -1,14 +1,12 @@
-
- 
 import tkinter as tk
 from tkinter import messagebox
 from utils import ProblemGenerator as ProblemBank, ScoreManager
 from game_objects import JellyfishManager
 
-# game settings
-QUESTIONS_PER_GAME = 12
-# Increased time per question for easier gameplay
-TIME_PER_QUESTION = {'Easy': 90, 'Medium': 75, 'Hard': 60}
+# game settings - these control how the game works
+QUESTIONS_PER_GAME = 10  # reduced questions to make it easier
+# giving more time per question so players can think better
+TIME_PER_QUESTION = {'Easy': 120, 'Medium': 100, 'Hard': 85}
 LEVEL_NAMES = {
     'Easy': "Jellyfish Fields",
     'Medium': "Krusty Krab", 
@@ -31,13 +29,14 @@ class StartPage(tk.Frame):
         self._create_widgets()
     
     def _create_widgets(self):
-        # try to load background image
+        # try to load background image - this might fail sometimes
         try:
             bg_image = tk.PhotoImage(file='assets/Images/bg_menu.png')
             bg_label = tk.Label(self, image=bg_image)
-            bg_label.image = bg_image
+            bg_label.image = bg_image  # need to keep reference or it disappears
             bg_label.place(x=0, y=0, relwidth=1, relheight=1)
         except:
+            # if image fails, just use a solid color
             self.config(bg='#82d4ed')
         
         title_frame = tk.Frame(self, bg='#76deee')
@@ -79,11 +78,14 @@ class StartPage(tk.Frame):
             command=self.controller.destroy
         ).pack(pady=10)
         
-        # music button
+        # music button - check if music is playing
         try:
-            music_text = '🎵 MUSIC ON' if self.controller.sound_manager.music_on else '🔇 MUSIC OFF'
+            if self.controller.sound_manager.music_on:
+                music_text = '🎵 MUSIC ON'
+            else:
+                music_text = '🔇 MUSIC OFF'
         except:
-            music_text = '🔇 MUSIC OFF'
+            music_text = '🔇 MUSIC OFF'  # default to off if something goes wrong
             
         self.music_btn = tk.Button(
             self, 
@@ -102,12 +104,15 @@ class StartPage(tk.Frame):
     def toggle_music(self):
         try:
             music_on = self.controller.sound_manager.toggle_music()
-            music_text = '🎵 MUSIC ON' if music_on else '🔇 MUSIC OFF'
+            if music_on:
+                music_text = '🎵 MUSIC ON'
+            else:
+                music_text = '🔇 MUSIC OFF'
             self.music_btn.config(text=music_text)
         except Exception as e:
             music_text = '🔇 MUSIC OFF'
             self.music_btn.config(text=music_text)
-            print(f"Music toggle failed: {e}")
+            print(f"Music toggle failed: {e}")  # debug info
 
 class PlayerInfoMapPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -117,9 +122,8 @@ class PlayerInfoMapPage(tk.Frame):
         self.name_confirmed = False
     
     def _create_widgets(self):
-       
-        
-        # Title area
+        # this creates all the stuff on the page
+        # Title area - where the welcome message goes
         title_frame = tk.Frame(self, bg='#FFE4B5')
         title_frame.place(relx=0.5, rely=0.05, anchor='center')
         
@@ -143,7 +147,7 @@ class PlayerInfoMapPage(tk.Frame):
             fg='#006994'
         ).pack(pady=5)
         
-        # User info form
+        # User info form - where player enters their name
         form_frame = tk.Frame(self, bg='#FFD700', bd=5, relief='groove')
         form_frame.place(relx=0.5, rely=0.2, anchor='center', width=400, height=250)
         
@@ -177,7 +181,7 @@ class PlayerInfoMapPage(tk.Frame):
         name_entry.pack(pady=5)
         name_entry.focus_set()
         
-        # validation label
+        # validation label - shows if name is ok or not
         self.name_validation_label = tk.Label(
             form_frame,
             text='',
@@ -200,7 +204,7 @@ class PlayerInfoMapPage(tk.Frame):
         )
         confirm_btn.pack(pady=10)
         
-        # Map title
+        # Map title - where we show the difficulty choices
         map_title_frame = tk.Frame(self, bg='#FFE4B5')
         map_title_frame.place(relx=0.5, rely=0.4, anchor='center')
         
@@ -241,11 +245,11 @@ class PlayerInfoMapPage(tk.Frame):
             fg='#FFD700'
         ).pack()
         
-        # Map selection frame
+        # Map selection frame - this holds the difficulty buttons
         map_frame = tk.Frame(self, bg='#FFE4B5')
         map_frame.place(relx=0.5, rely=0.65, anchor='center')
         
-        # Level descriptions and colors
+        # Level descriptions and colors - each difficulty has its own info
         level_info = [
             ("🌊 Jellyfish Fields\n\n🎯 Easy Difficulty\n💎 50 points per question\n\n🐙 Perfect for beginners!", '#87CEEB', 'Easy', '🐙'),
             ("🍔 Krusty Krab\n\n⚡ Medium Difficulty\n💎 100 points per question\n\n🦀 For experienced players!", '#FFB347', 'Medium', '🦀'),
@@ -253,7 +257,7 @@ class PlayerInfoMapPage(tk.Frame):
         ]
         
         for i, (desc, color, level, emoji) in enumerate(level_info):
-            # Create button container
+            # Create button container - each difficulty gets its own button
             btn_container = tk.Frame(map_frame, bg=color, bd=5, relief='raised')
             btn_container.grid(row=0, column=i, padx=20, pady=15)
             
@@ -278,11 +282,11 @@ class PlayerInfoMapPage(tk.Frame):
             )
             level_btn.pack(fill='both', expand=True, padx=3, pady=3)
         
-        # Button frame
+        # Button frame - bottom buttons for navigation
         button_frame = tk.Frame(self, bg='#FFE4B5')
         button_frame.place(relx=0.5, rely=0.92, anchor='center')
         
-        # New player button
+        # New player button - lets you start over
         new_player_btn = tk.Button(
             button_frame, 
             text='👤 New Player', 
@@ -327,7 +331,7 @@ class PlayerInfoMapPage(tk.Frame):
         )
         menu_btn.pack(side='left', padx=10)
         
-        # Status label
+        # Status label - tells player what to do
         self.status_label = tk.Label(
             self, 
             text='Please enter and confirm your name first',
@@ -337,7 +341,7 @@ class PlayerInfoMapPage(tk.Frame):
         )
         self.status_label.place(relx=0.5, rely=0.32, anchor='center')
         
-        # Add floating decorations
+        # Add floating decorations - makes it look pretty
         self._add_floating_decorations()
 
     def confirm_name(self):
@@ -345,33 +349,53 @@ class PlayerInfoMapPage(tk.Frame):
         
         self.name_validation_label.config(text='')
         
+        # check if name is empty
         if not name:
             self.name_validation_label.config(text='❌ Name cannot be empty!', fg='red')
             return
             
-        if len(name) < 3:
+        # check if name is too short
+        nameLength = 0
+        for char in name:
+            nameLength = nameLength + 1
+        if nameLength < 3:
             self.name_validation_label.config(text='❌ Name must be at least 3 characters long!', fg='red')
             return
             
-        if len(name) > 15:
+        # check if name is too long
+        if nameLength > 15:
             self.name_validation_label.config(text='❌ Name too long (max 15 characters)!', fg='red')
             return
             
-        if not name.replace(" ", "").isalnum():
+        # check if name has only letters and numbers
+        hasOnlyGoodChars = True
+        for char in name:
+            if char != " " and not char.isalnum():
+                hasOnlyGoodChars = False
+                break
+        if not hasOnlyGoodChars:
             self.name_validation_label.config(text='❌ Name can only contain letters and numbers!', fg='red')
             return
         
         from utils import ScoreManager
         score_manager = ScoreManager()
         existing_records = score_manager.get_records()
-        existing_names = [record.get('player', '').lower() for record in existing_records]
+        existing_names = []
+        for record in existing_records:
+            playerName = record.get('player', '')
+            existing_names.append(playerName.lower())
         
         if name.lower() in existing_names:
             suggestions = [
                 f"{name}1", f"{name}2", f"{name}2024", f"{name}_player", 
                 f"Super{name}", f"{name}Math", f"{name}Star"
             ]
-            suggestion_text = ", ".join(suggestions[:3])
+            # join first 3 suggestions with commas
+            suggestion_text = ""
+            for i in range(min(3, len(suggestions))):
+                if i > 0:
+                    suggestion_text = suggestion_text + ", "
+                suggestion_text = suggestion_text + suggestions[i]
             
             self.name_validation_label.config(
                 text=f'❌ "{name}" already exists in the leaderboard!\n💡 Try: {suggestion_text}', 
@@ -400,6 +424,7 @@ class PlayerInfoMapPage(tk.Frame):
             (0.2, 0.2), (0.8, 0.2), (0.2, 0.8), (0.8, 0.8)
         ]
         
+        # add decorations around the page
         for i, (relx, rely) in enumerate(positions):
             if i < len(decorations):
                 deco_label = tk.Label(
@@ -412,6 +437,7 @@ class PlayerInfoMapPage(tk.Frame):
                 deco_label.place(relx=relx, rely=rely, anchor='center')
     
     def reset_player_info(self):
+        # clear everything and start over
         self.name_var.set('')
         self.name_confirmed = False
         
@@ -434,10 +460,12 @@ class GamePage(tk.Frame):
         self.reset_game()
     
     def _create_widgets(self):
+        # set up the main game screen
         self.config(bg='#FFE4B5')
         main_frame = tk.Frame(self, bg='#FFE4B5')
         main_frame.pack(fill='both', expand=True, padx=15, pady=15)
         
+        # top navigation bar
         top_nav = tk.Frame(main_frame, bg='#FFD700', height=60, bd=3, relief='raised')
         top_nav.pack(fill='x', pady=(0, 10))
         top_nav.pack_propagate(False)
@@ -466,18 +494,22 @@ class GamePage(tk.Frame):
         )
         game_title.pack(side='left', padx=15, pady=10)
     
+        # status bar - shows lives, score, timer
         status_bar = tk.Frame(main_frame, bg=STATUS_BAR_COLOR, height=50)
         status_bar.pack(fill='x', pady=(0, 10))
         
+        # lives display - shows how many lives left
         self.lives_frame = tk.Frame(status_bar, bg=STATUS_BAR_COLOR)
         self.lives_frame.pack(side='left', padx=15)
         
+        # try to load heart image for lives
         try:
             self.heart_img = tk.PhotoImage(file='assets/Images/heart.png')
-            self.heart_img = self.heart_img.subsample(4, 4)
+            self.heart_img = self.heart_img.subsample(4, 4)  # make it smaller
         except Exception:
-            self.heart_img = None
+            self.heart_img = None  # if image fails, we'll use text instead
         
+        # create 3 life hearts
         self.lives_labels = []
         for i in range(3):
             if self.heart_img:
@@ -489,7 +521,7 @@ class GamePage(tk.Frame):
             label.pack(side='left', padx=2)
             self.lives_labels.append(label)
         
-        # score display
+        # score display - shows current score
         self.score_label = tk.Label(
             status_bar, 
             text='Score: 0', 
@@ -499,7 +531,7 @@ class GamePage(tk.Frame):
         )
         self.score_label.pack(side='left', padx=15)
         
-        # timer display
+        # timer display - shows time left
         self.timer_label = tk.Label(
             status_bar, 
             text='Time: 20s', 
@@ -509,7 +541,7 @@ class GamePage(tk.Frame):
         )
         self.timer_label.pack(side='right', padx=15)
         
-        # question counter
+        # question counter - shows which question we're on
         self.counter_label = tk.Label(
             status_bar, 
             text='Question: 1/12', 
@@ -519,11 +551,11 @@ class GamePage(tk.Frame):
         )
         self.counter_label.pack(side='right', padx=15)
     
-        # Question display - SpongeBob themed version
+        # Question display - where the math problem shows up
         question_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
         question_container.pack(fill='x', padx=15, pady=10)
         
-        # Question title decoration
+        # Question title decoration - makes it look fun
         question_title = tk.Label(
             question_container,
             text='🧽 Question Time! 🧽',
@@ -544,11 +576,11 @@ class GamePage(tk.Frame):
         )
         self.question_label.pack(fill='x', padx=15, pady=10)
     
-        # Jellyfish canvas container - Enhanced SpongeBob theme
+        # Jellyfish canvas container - where the jellyfish swim around
         canvas_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')
         canvas_container.pack(fill='both', expand=True, pady=10)
         
-        # Add canvas title decoration
+        # Add canvas title decoration - tells player what to do
         canvas_title = tk.Frame(canvas_container, bg='#FFD700')
         canvas_title.pack(side='top', pady=(5, 0))
         
@@ -561,7 +593,7 @@ class GamePage(tk.Frame):
         )
         title_label.pack(side='left', padx=15)
         
-        # Add SpongeBob decorations
+        # Add SpongeBob decorations - makes it look cool
         decoration_label = tk.Label(
             canvas_title,
             text='🧽 🦀 🐙 🐠 ⭐',
@@ -571,21 +603,21 @@ class GamePage(tk.Frame):
         )
         decoration_label.pack(side='right', padx=15)
         
-        # Canvas border
+        # Canvas border - gives it a nice frame
         canvas_border = tk.Frame(canvas_container, bg='#FF6B35', bd=2, relief='sunken')
         canvas_border.pack(fill='both', expand=True, padx=5, pady=5)
     
         self.canvas = tk.Canvas(canvas_border, bg='#87CEEB', highlightthickness=0)
         self.canvas.pack(fill='both', expand=True, padx=2, pady=2)
         
-        # Add ocean decoration elements
+        # Add ocean decoration elements - bubbles and stuff
         self._add_ocean_decorations()
     
-        # Feedback label - SpongeBob themed version
+        # Feedback label - tells player if they got it right or wrong
         feedback_container = tk.Frame(main_frame, bg='#FFD700', bd=3, relief='raised')  # Use yellow background to ensure visibility
         feedback_container.pack(fill='x', pady=10)
         
-        # Feedback title decoration
+        # Feedback title decoration - makes it look organized
         feedback_title = tk.Label(
             feedback_container,
             text='💬 Feedback Zone 💬',
@@ -605,12 +637,12 @@ class GamePage(tk.Frame):
         )
         self.feedback_label.pack(fill='x', padx=10, pady=5)
     
-        # Bottom decoration bar - SpongeBob theme
+        # Bottom decoration bar - SpongeBob theme at the bottom
         bottom_decor = tk.Frame(main_frame, bg='#FFD700', height=40, bd=2, relief='sunken')
         bottom_decor.pack(side='bottom', fill='x', pady=(10, 0))
         bottom_decor.pack_propagate(False)
         
-        # Add SpongeBob theme decorations
+        # Add SpongeBob theme decorations - more fun stuff
         decor_label = tk.Label(
             bottom_decor,
             text='🐙 🦀 🧽 🐠 ⭐ 🐚',
@@ -621,8 +653,8 @@ class GamePage(tk.Frame):
         decor_label.pack(expand=True, pady=8)
     
     def _add_ocean_decorations(self):
-        """Add ocean decoration elements"""
-        # Add bubble decorations
+        """Add ocean decoration elements - makes it look like underwater"""
+        # Add bubble decorations - little bubbles floating around
         for i in range(8):
             x = 30 + i * 80
             y = 20 + (i % 3) * 15
@@ -632,7 +664,7 @@ class GamePage(tk.Frame):
                 tags='decoration'
             )
         
-        # Add starfish decorations
+        # Add starfish decorations - starfish on the ocean floor
         for i in range(4):
             x = 60 + i * 120
             y = 40 + (i % 2) * 20
@@ -643,7 +675,7 @@ class GamePage(tk.Frame):
                 tags='decoration'
             )
         
-        # Add coral decorations
+        # Add coral decorations - plants at the bottom
         for i in range(3):
             x = 50 + i * 150
             y = 350  # Fixed at bottom
@@ -655,23 +687,26 @@ class GamePage(tk.Frame):
             )
 
     def cancel_all_timers(self):
+        # stop all the timers so they don't keep running
         for timer_id in self._active_timers:
             try:
                 self.after_cancel(timer_id)
             except:
-                pass
+                pass  # ignore errors if timer already cancelled
         self._active_timers = []
         
         if self.jellyfish_manager:
             self.jellyfish_manager.stop_animations()
 
     def return_to_map(self):
+        # ask player if they really want to quit
         if messagebox.askyesno("Confirm", "Exit current level? Progress will be lost."):
             self.cancel_all_timers()
             self._game_active = False
             self.controller.show_frame('PlayerInfoMapPage')
 
     def reset_game(self):
+        # start a new game - reset everything
         self.cancel_all_timers()
         self._game_active = True
         self.question_count = 0
@@ -681,6 +716,7 @@ class GamePage(tk.Frame):
         self.wrong_questions = []
         self.current_question_data = None
         
+        # set background color based on difficulty
         self.bg_color = BACKGROUND_COLORS.get(self.controller.selected_difficulty, 'white')
         self.config(bg=self.bg_color)
         self.question_label.config(bg=self.bg_color)
@@ -690,21 +726,31 @@ class GamePage(tk.Frame):
         
         self.pb = ProblemBank(self.controller.selected_difficulty)
         
+        # update life hearts display
         for i, label in enumerate(self.lives_labels):
-            label.config(state='normal' if i < self.lives else 'disabled')
+            if i < self.lives:
+                label.config(state='normal')
+            else:
+                label.config(state='disabled')
     
         self.next_question()
         return True
 
     def update_status(self):
+        # update the display with current score and lives
         self.score_label.config(text=f'Score: {self.score}')
         
+        # update life hearts
         for i, label in enumerate(self.lives_labels):
-            label.config(state='normal' if i < self.lives else 'disabled')
+            if i < self.lives:
+                label.config(state='normal')
+            else:
+                label.config(state='disabled')
         
         self.counter_label.config(text=f'Question: {self.question_count}/{QUESTIONS_PER_GAME}')
 
     def next_question(self):
+        # move to the next question
         if not self._game_active:
             return
             
@@ -718,12 +764,12 @@ class GamePage(tk.Frame):
         
         self.cancel_all_timers()
         
-        # get new problem
+        # get new problem from the problem bank
         problem, answer, options = self.pb.create_problem()
         self.correct_answer = answer
         self.options = options
         
-        # save question data for review
+        # save question data for review later
         self.current_question_data = {
             'question': problem,
             'correct_answer': answer,
@@ -732,7 +778,7 @@ class GamePage(tk.Frame):
             'user_answer': None
         }
         
-        # update display
+        # update display with new question
         level_name = LEVEL_NAMES.get(self.controller.selected_difficulty, self.controller.selected_difficulty)
         self.question_label.config(text=f"{level_name}\n\n{problem}")
         self.feedback_label.config(text='')
@@ -747,12 +793,14 @@ class GamePage(tk.Frame):
         self.start_timer()
     
     def start_timer(self):
+        # start the countdown timer
         if not self._game_active:
             return
             
         self.update_timer()
 
     def update_timer(self):
+        # update the timer every second
         if not self._game_active or not self.winfo_ismapped():
             return
         
@@ -763,6 +811,7 @@ class GamePage(tk.Frame):
         self.time_left -= 1
         self.timer_label.config(text=f'Time: {self.time_left}s')
         
+        # cancel old timer and start new one
         if self._active_timers:
             self.after_cancel(self._active_timers[0])
         
@@ -770,6 +819,7 @@ class GamePage(tk.Frame):
         self._active_timers = [timer_id]
 
     def handle_timeout(self):
+        # player ran out of time
         if not self._game_active:
             return
             
@@ -777,10 +827,10 @@ class GamePage(tk.Frame):
         try:
             self.controller.sound_manager.play_wrong()
         except:
-            pass
+            pass  # ignore if sound fails
         self.lives -= 1
         
-        # save wrong answer
+        # save wrong answer for review
         if self.current_question_data:
             self.current_question_data['user_answer'] = 'No answer (timeout)'
             self.wrong_questions.append(self.current_question_data.copy())
@@ -802,8 +852,10 @@ class GamePage(tk.Frame):
             self.after(2000, self.next_question)
 
     def create_jellyfish(self, options):
+        # create jellyfish with answer options
         self.jellyfish = self.jellyfish_manager.create_jellyfish(options)
         
+        # bind mouse events to each jellyfish
         for i in range(len(self.jellyfish)):
             self.canvas.tag_bind(f'jelly_{i}', '<ButtonPress-1>', 
                                 lambda e, idx=i: self.jellyfish_manager.press_jellyfish(idx))
@@ -822,18 +874,18 @@ class GamePage(tk.Frame):
             self.jellyfish_manager.disable_interaction()
 
     def check_answer(self, selected):
-        # prevent double clicks
+        # prevent double clicks - only check once
         if hasattr(self, '_answer_checked') and self._answer_checked:
             return
         
         self._answer_checked = True
         self.disable_jellyfish()
         
-        # save user's answer
+        # save user's answer for review
         if self.current_question_data:
             self.current_question_data['user_answer'] = selected
         
-        # check if answer is correct
+        # check if answer is correct - handle different types
         if isinstance(self.correct_answer, tuple):
             try:
                 parts = selected.split(',')
@@ -1050,54 +1102,55 @@ class GamePage(tk.Frame):
                 justify='left'
             ).pack(anchor='w', padx=15, pady=8)
             
-            # Options
-            options_frame = tk.Frame(question_frame, bg='#FFE4E1')
-            options_frame.pack(anchor='w', padx=15, pady=8)
+            # show all the choices that were available
+            choices_container = tk.Frame(question_frame, bg='#FFE4E1')
+            choices_container.pack(anchor='w', padx=15, pady=8)
             
             tk.Label(
-                options_frame,
-                text="📋 All Options:",
+                choices_container,
+                text="📋 Available Choices:",
                 font=('Comic Sans MS', 11, 'bold'),
                 bg='#FFE4E1',
                 fg='#2C3E50'
             ).pack(anchor='w')
             
-            for j, option in enumerate(wrong_q['options']):
-                option_text = f"{chr(65+j)}. {option}"
-                # Highlight user's wrong answer
-                if wrong_q.get('user_answer') == option:
-                    bg_color = '#FFB6C1'  # Light red background
-                    fg_color = '#8B0000'  # Dark red text
-                    option_text += " ❌ (Your Answer)"
+            # loop through each choice and show it
+            for choice_index, choice_value in enumerate(wrong_q['options']):
+                choice_display = f"{chr(65+choice_index)}. {choice_value}"
+                # mark the wrong answer with red background
+                if wrong_q.get('user_answer') == choice_value:
+                    background_color = '#FFB6C1'  # pink background for wrong choice
+                    text_color = '#8B0000'  # dark red text
+                    choice_display += " ❌ (You picked this)"
                 else:
-                    bg_color = '#FFE4E1'
-                    fg_color = '#2C3E50'
+                    background_color = '#FFE4E1'
+                    text_color = '#2C3E50'
                 
-                option_label = tk.Label(
-                    options_frame,
-                    text=option_text,
+                choice_label = tk.Label(
+                    choices_container,
+                    text=choice_display,
                     font=('Comic Sans MS', 11),
-                    bg=bg_color,
-                    fg=fg_color,
+                    bg=background_color,
+                    fg=text_color,
                     relief='solid',
                     bd=1,
                     padx=10,
                     pady=2
                 )
-                option_label.pack(anchor='w', padx=25, pady=2, fill='x')
+                choice_label.pack(anchor='w', padx=25, pady=2, fill='x')
             
-            # Answer comparison
-            answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
-            answer_frame.pack(anchor='w', padx=15, pady=10, fill='x')
+            # show what you picked vs what was right
+            comparison_frame = tk.Frame(question_frame, bg='#FFE4E1')
+            comparison_frame.pack(anchor='w', padx=15, pady=10, fill='x')
             
-            # User answer
-            user_answer = wrong_q.get('user_answer', 'No answer')
-            if isinstance(user_answer, (int, float)):
-                user_answer = str(user_answer)
+            # what you answered
+            player_response = wrong_q.get('user_answer', 'No answer')
+            if isinstance(player_response, (int, float)):
+                player_response = str(player_response)
             
             tk.Label(
-                answer_frame,
-                text=f"❌ Your Answer: {user_answer}",
+                comparison_frame,
+                text=f"❌ Your Answer: {player_response}",
                 font=('Comic Sans MS', 12, 'bold'),
                 bg='#FFB6C1',
                 fg='#8B0000',
@@ -1107,14 +1160,14 @@ class GamePage(tk.Frame):
                 pady=5
             ).pack(side='left', padx=(0, 10))
             
-            # Correct answer
-            correct_answer = wrong_q['correct_answer']
-            if isinstance(correct_answer, (int, float)):
-                correct_answer = str(correct_answer)
+            # what was actually correct
+            right_answer = wrong_q['correct_answer']
+            if isinstance(right_answer, (int, float)):
+                right_answer = str(right_answer)
             
             tk.Label(
-                answer_frame,
-                text=f"✅ Correct Answer: {correct_answer}",
+                comparison_frame,
+                text=f"✅ Correct Answer: {right_answer}",
                 font=('Comic Sans MS', 12, 'bold'),
                 bg='#90EE90',
                 fg='#228B22',
@@ -1124,16 +1177,16 @@ class GamePage(tk.Frame):
                 pady=5
             ).pack(side='left')
             
-            # Add separator line
-            separator = tk.Frame(question_frame, height=2, bg='#8B0000')
-            separator.pack(fill='x', padx=15, pady=10)
+            # add a line to separate questions
+            divider_line = tk.Frame(question_frame, height=2, bg='#8B0000')
+            divider_line.pack(fill='x', padx=15, pady=10)
         
-        # Bottom buttons
-        button_frame = tk.Frame(main_frame, bg='#E8F4FD')
-        button_frame.pack(fill='x', pady=(15, 0))
+        # buttons at the bottom for navigation
+        bottom_buttons = tk.Frame(main_frame, bg='#E8F4FD')
+        bottom_buttons.pack(fill='x', pady=(15, 0))
         
         tk.Button(
-            button_frame,
+            bottom_buttons,
             text="🏠 Back to Menu",
             font=('Comic Sans MS', 12, 'bold'),
             bg='#FF9800',
@@ -1144,7 +1197,7 @@ class GamePage(tk.Frame):
         ).pack(side='left', padx=5)
         
         tk.Button(
-            button_frame,
+            bottom_buttons,
             text="🏆 View Leaderboard",
             font=('Comic Sans MS', 12, 'bold'),
             bg='#2196F3',
@@ -1155,7 +1208,7 @@ class GamePage(tk.Frame):
         ).pack(side='left', padx=5)
         
         tk.Button(
-            button_frame,
+            bottom_buttons,
             text="🎮 Play Again",
             font=('Comic Sans MS', 12, 'bold'),
             bg='#4CAF50',
@@ -1165,36 +1218,36 @@ class GamePage(tk.Frame):
             command=lambda: [summary_window.destroy(), self.reset_game(), self.controller.show_frame('GamePage')]
         ).pack(side='right', padx=5)
         
-        # Layout scrollable area
+        # put the scrollable area together
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Bind mouse wheel
-        def _on_mousewheel(event):
+        # make mouse wheel work for scrolling
+        def scroll_with_mouse(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<MouseWheel>", scroll_with_mouse)
         
-        # Unbind wheel when window closes
-        def on_closing():
+        # clean up when window closes
+        def close_window_properly():
             canvas.unbind_all("<MouseWheel>")
             summary_window.destroy()
         
-        summary_window.protocol("WM_DELETE_WINDOW", on_closing)
+        summary_window.protocol("WM_DELETE_WINDOW", close_window_properly)
 
     def game_completed(self):
-        """Game completed"""
+        """you finished all the questions!"""
         self._game_active = False
         self.cancel_all_timers()
         
         player_name = getattr(self.controller, 'player_name', 'Player')
         difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
         
-        # Automatically save the score when game is completed
+        # save your score automatically
         self.save_score_to_leaderboard()
         
-        # User-friendly completion messages
-        completion_messages = [
+        # pick a random congratulatory message
+        good_job_messages = [
             f"🎉 Amazing job, {player_name}! You're a math superstar! 🌟",
             f"🏆 Fantastic work! You've conquered the {difficulty} challenge!",
             f"✨ Incredible! You've mastered the {difficulty} level!",
@@ -1202,38 +1255,38 @@ class GamePage(tk.Frame):
         ]
         
         import random
-        message = random.choice(completion_messages)
+        message = random.choice(good_job_messages)
         
-        # Use custom dialog to provide more options
+        # make a popup window with choices
         from tkinter import simpledialog
         
-        # Create custom dialog - larger window
+        # create the popup window
         dialog = tk.Toplevel()
         dialog.title("🎉 Level Complete! 🎉")
-        dialog.geometry("1000x700")  # Larger window size
+        dialog.geometry("1000x700")  # make it big enough
         dialog.configure(bg='#E8F4FD')
         dialog.resizable(True, True)
         
-        # Get screen dimensions and center display
+        # figure out where to put it on screen
         screen_width = dialog.winfo_screenwidth()
         screen_height = dialog.winfo_screenheight()
         x = (screen_width - 1000) // 2
         y = (screen_height - 700) // 2
         dialog.geometry(f"1000x700+{x}+{y}")
         
-        # Center display
+        # make it stay on top
         dialog.transient(self)
         dialog.grab_set()
         
-        # Main frame
+        # main container for everything
         main_frame = tk.Frame(dialog, bg='#E8F4FD')
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        # Button frame - moved to top
+        # put buttons at the top
         button_frame = tk.Frame(main_frame, bg='#E8F4FD')
         button_frame.pack(fill='x', pady=(0, 15))
         
-        # Button instructions
+        # tell user what buttons do
         tk.Label(
             button_frame,
             text="📋 Action Buttons:",
@@ -1244,19 +1297,19 @@ class GamePage(tk.Frame):
         
         play_again_var = tk.StringVar(value="")
         
-        def on_play_again():
+        def play_again_clicked():
             play_again_var.set("play_again")
             dialog.destroy()
         
-        def on_back_menu():
+        def back_to_map_clicked():
             play_again_var.set("back_menu")
             dialog.destroy()
         
-        def on_leaderboard():
+        def show_leaderboard_clicked():
             play_again_var.set("leaderboard")
             dialog.destroy()
         
-        # Button group
+        # group all the buttons together
         button_group = tk.Frame(button_frame, bg='#E8F4FD')
         button_group.pack(expand=True)
         
@@ -1268,7 +1321,7 @@ class GamePage(tk.Frame):
             fg='white',
             padx=12,
             pady=6,
-            command=on_play_again
+            command=play_again_clicked
         ).pack(side='left', padx=10)
         
         tk.Button(
@@ -1279,7 +1332,7 @@ class GamePage(tk.Frame):
                 fg='white',
             padx=12,
             pady=6,
-            command=on_back_menu
+            command=back_to_map_clicked
         ).pack(side='left', padx=10)
         
         tk.Button(
@@ -1290,10 +1343,10 @@ class GamePage(tk.Frame):
             fg='white',
             padx=12,
             pady=6,
-            command=on_leaderboard
+            command=show_leaderboard_clicked
         ).pack(side='left', padx=10)
         
-        # Add Review Questions button if there are wrong questions
+        # add review button if you got some wrong
         if self.wrong_questions:
             tk.Button(
                 button_group,
@@ -1306,18 +1359,18 @@ class GamePage(tk.Frame):
                 command=self.show_questions_summary
             ).pack(side='left', padx=10)
         
-        # Title and statistics - prettier layout
+        # show title and stats in a nice layout
         header_frame = tk.Frame(main_frame, bg='#E8F4FD')
         header_frame.pack(fill='x', pady=(0, 15))
         
-        # Decorative border
+        # fancy border around title
         title_border = tk.Frame(header_frame, bg='#FFD700', bd=3, relief='raised')
         title_border.pack(fill='x', pady=(0, 15))
         
         title_content = tk.Frame(title_border, bg='#FFF8DC', bd=2, relief='sunken')
         title_content.pack(fill='x', padx=5, pady=5)
         
-        # Celebration decorations
+        # party decorations
         celebration_frame = tk.Frame(title_content, bg='#FFF8DC')
         celebration_frame.pack(pady=(5, 0))
         
@@ -1338,7 +1391,7 @@ class GamePage(tk.Frame):
             wraplength=900
         ).pack(pady=10)
         
-        # Score and difficulty info - prettier display
+        # show your score and difficulty info
         stats_border = tk.Frame(header_frame, bg='#87CEEB', bd=2, relief='raised')
         stats_border.pack(fill='x', pady=10)
         
@@ -1361,7 +1414,7 @@ class GamePage(tk.Frame):
             fg='#006994'
         ).pack(pady=2)
         
-        # Show leaderboard info
+        # show where you rank on leaderboard
         leaderboard_text, leaderboard_color = self._get_leaderboard_info(player_name, self.score)
         tk.Label(
             stats_content,
@@ -1371,14 +1424,14 @@ class GamePage(tk.Frame):
             fg=leaderboard_color
         ).pack(pady=2)
         
-        # Show wrong questions statistics - prettier display
+        # show how well you did if you got some wrong
         if self.wrong_questions:
             wrong_count = len(self.wrong_questions)
             total_questions = QUESTIONS_PER_GAME
             correct_count = total_questions - wrong_count
             accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
             
-            # Performance statistics border
+            # performance stats with nice border
             perf_border = tk.Frame(header_frame, bg='#98FB98', bd=2, relief='raised')
             perf_border.pack(fill='x', pady=10)
             
@@ -1401,9 +1454,9 @@ class GamePage(tk.Frame):
                 fg='#2C3E50'
             ).pack(pady=3)
         
-        # 错误问题显示区域
+        # show the wrong questions if you got any
         if self.wrong_questions:
-            # 创建滚动区域显示错误问题
+            # make a scrollable area for the wrong questions
             canvas = tk.Canvas(main_frame, bg='#E8F4FD', highlightthickness=0, height=400)
             scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
             scrollable_frame = tk.Frame(canvas, bg='#E8F4FD')
@@ -1416,7 +1469,7 @@ class GamePage(tk.Frame):
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas.configure(yscrollcommand=scrollbar.set)
             
-            # 错误问题标题
+            # title for wrong questions
             tk.Label(
                 scrollable_frame,
                 text="📝 Wrong Questions Summary:",
@@ -1425,13 +1478,13 @@ class GamePage(tk.Frame):
                 fg='#2C3E50'
             ).pack(pady=(0, 10))
             
-            # 显示每个错误问题
+            # show each wrong question
             for i, wrong_q in enumerate(self.wrong_questions, 1):
-                # Question container with border
+                # put each question in its own box
                 question_frame = tk.Frame(scrollable_frame, bg='#FFE4E1', bd=2, relief='raised')
                 question_frame.pack(fill='x', pady=5, padx=10)
                 
-                # 问题编号
+                # question number
                 tk.Label(
                     question_frame,
                     text=f"Question #{wrong_q['question_number']}",
@@ -1440,7 +1493,7 @@ class GamePage(tk.Frame):
                     fg='#8B0000'
                 ).pack(anchor='w', padx=10, pady=(10, 5))
                 
-                # 问题内容
+                # the actual question
                 tk.Label(
                     question_frame,
                     text=wrong_q['question'],
@@ -1451,7 +1504,7 @@ class GamePage(tk.Frame):
                     justify='left'
                 ).pack(anchor='w', padx=10, pady=5)
                 
-                # 用户答案和正确答案
+                # what you said vs what was right
                 answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
                 answer_frame.pack(anchor='w', padx=10, pady=5, fill='x')
                 
@@ -1487,11 +1540,11 @@ class GamePage(tk.Frame):
                     pady=3
                 ).pack(side='left')
             
-            # 布局滚动区域
+            # put the scrollable area together
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
         
-        # 提示用户查看问题总结
+        # remind user they can review questions
         if self.wrong_questions:
             hint_frame = tk.Frame(main_frame, bg='#FFFACD', bd=2, relief='raised')
             hint_frame.pack(fill='x', pady=10)
@@ -1504,42 +1557,42 @@ class GamePage(tk.Frame):
                 fg='#8B4513'
             ).pack(pady=8)
         
-        # 等待用户选择
+        # wait for user to pick something
         
-        # 等待用户选择
+        # wait for user to pick something
         dialog.wait_window()
         result = play_again_var.get()
         
         if result == "play_again":
-            # 直接重新开始相同难度的游戏
+            # start the same difficulty again
             self.reset_game()
             self.controller.show_frame('GamePage')
         elif result == "leaderboard":
-            # 显示排行榜
+            # show the leaderboard
             self.save_and_show_leaderboard()
         elif result == "back_menu":
-            # 返回地图页面，保持玩家信息
+            # go back to map page, keep player info
             self.reset_game()
             self.controller.show_frame('PlayerInfoMapPage')
-        else:  # 默认返回菜单
-            # 返回菜单并重置玩家信息
+        else:  # default to menu
+            # go back to menu and reset player info
             self.reset_game()
             player_info_page = self.controller.page_frames['PlayerInfoMapPage']
             player_info_page.reset_player_info()
             self.controller.show_frame('PlayerInfoMapPage')
 
     def game_over(self):
-        """游戏结束"""
+        """you ran out of lives"""
         self._game_active = False
         self.cancel_all_timers()
         
         player_name = getattr(self.controller, 'player_name', 'Player')
         
-        # Automatically save the score when game is over
+        # save your score automatically
         self.save_score_to_leaderboard()
         
-        # 用户友好的游戏结束消息
-        game_over_messages = [
+        # pick a random encouraging message
+        encouraging_messages = [
             f"💪 Don't worry, {player_name}! Every great mathematician started somewhere!",
             f"🌟 Keep practicing, {player_name}! You're getting better with each try!",
             f"🎯 Nice effort, {player_name}! Math is a journey, not a destination!",
@@ -1547,9 +1600,9 @@ class GamePage(tk.Frame):
         ]
         
         import random
-        message = random.choice(game_over_messages)
+        message = random.choice(encouraging_messages)
         
-        # 根据当前难度提供合适的建议
+        # give advice based on difficulty level
         current_difficulty = getattr(self.controller, 'selected_difficulty', 'Easy')
         if current_difficulty == 'Easy':
             tip = "💡 Tip: Practice makes perfect! Try again to improve your score!"
@@ -1558,40 +1611,40 @@ class GamePage(tk.Frame):
         else:  # Hard
             tip = "💡 Tip: Hard level is challenging! Try Medium or Easy to practice first!"
         
-        # 创建自定义对话框 - 更大的窗口
+        # make a popup window for game over
         dialog = tk.Toplevel()
         dialog.title("🎮 Game Over - But Don't Give Up! 🎮")
-        dialog.geometry("1000x700")  # 更大的窗口尺寸
+        dialog.geometry("1000x700")  # make it big enough
         dialog.configure(bg='#E8F4FD')
         dialog.resizable(True, True)
         
-        # 获取屏幕尺寸并居中显示
+        # center it on screen
         screen_width = dialog.winfo_screenwidth()
         screen_height = dialog.winfo_screenheight()
         x = (screen_width - 1000) // 2
         y = (screen_height - 700) // 2
         dialog.geometry(f"1000x700+{x}+{y}")
         
-        # 居中显示
+        # make it stay on top
         dialog.transient(self)
         dialog.grab_set()
         
-        # 主框架
+        # main container
         main_frame = tk.Frame(dialog, bg='#E8F4FD')
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        # 标题和统计信息 - 更漂亮的布局
+        # title and stats area
         header_frame = tk.Frame(main_frame, bg='#E8F4FD')
         header_frame.pack(fill='x', pady=(0, 15))
         
-        # 装饰性边框
+        # fancy border around title
         title_border = tk.Frame(header_frame, bg='#FFB6C1', bd=3, relief='raised')
         title_border.pack(fill='x', pady=(0, 15))
         
         title_content = tk.Frame(title_border, bg='#FFF0F5', bd=2, relief='sunken')
         title_content.pack(fill='x', padx=5, pady=5)
         
-        # 鼓励装饰
+        # encouraging decorations
         encouragement_frame = tk.Frame(title_content, bg='#FFF0F5')
         encouragement_frame.pack(pady=(5, 0))
         
@@ -1612,7 +1665,7 @@ class GamePage(tk.Frame):
             wraplength=900
         ).pack(pady=10)
         
-        # 分数和难度信息 - 更漂亮的显示
+        # show score and difficulty info
         stats_border = tk.Frame(header_frame, bg='#87CEEB', bd=2, relief='raised')
         stats_border.pack(fill='x', pady=10)
         
@@ -1635,7 +1688,7 @@ class GamePage(tk.Frame):
             fg='#006994'
         ).pack(pady=2)
         
-        # 显示排行榜信息
+        # show leaderboard ranking
         leaderboard_text, leaderboard_color = self._get_leaderboard_info(player_name, self.score)
         tk.Label(
             stats_content,
@@ -1645,7 +1698,7 @@ class GamePage(tk.Frame):
             fg=leaderboard_color
         ).pack(pady=2)
         
-        # 提示信息 - 更漂亮的显示
+        # show helpful tip
         tip_border = tk.Frame(header_frame, bg='#FFE4B5', bd=2, relief='raised')
         tip_border.pack(fill='x', pady=10)
         
@@ -1669,14 +1722,14 @@ class GamePage(tk.Frame):
             wraplength=900
         ).pack(pady=3)
         
-        # 显示错误问题统计 - 更漂亮的显示
+        # show performance stats if you got some wrong
         if self.wrong_questions:
             wrong_count = len(self.wrong_questions)
             total_questions = self.question_count
             correct_count = total_questions - wrong_count
             accuracy = (correct_count / total_questions) * 100 if total_questions > 0 else 0
             
-            # 性能统计边框
+            # performance stats with nice border
             perf_border = tk.Frame(header_frame, bg='#98FB98', bd=2, relief='raised')
             perf_border.pack(fill='x', pady=10)
             
@@ -1699,7 +1752,7 @@ class GamePage(tk.Frame):
                 fg='#2C3E50'
             ).pack(pady=3)
         
-        # 提示用户查看问题总结
+        # remind user they can review questions
         if self.wrong_questions:
             hint_frame = tk.Frame(main_frame, bg='#FFFACD', bd=2, relief='raised')
             hint_frame.pack(fill='x', pady=10)
@@ -1712,25 +1765,25 @@ class GamePage(tk.Frame):
                 fg='#8B4513'
             ).pack(pady=8)
         
-        # 按钮框架
+        # button area
         button_frame = tk.Frame(main_frame, bg='#E8F4FD')
         button_frame.pack(fill='x', pady=(15, 0))
         
         choice_var = tk.StringVar(value="")
         
-        def on_try_again():
+        def try_again_clicked():
             choice_var.set("try_again")
             dialog.destroy()
         
-        def on_back_menu():
+        def back_to_map_clicked():
             choice_var.set("back_menu")
             dialog.destroy()
         
-        def on_leaderboard():
+        def show_leaderboard_clicked():
             choice_var.set("leaderboard")
             dialog.destroy()
         
-        # 按钮组
+        # group all buttons together
         button_group = tk.Frame(button_frame, bg='#E8F4FD')
         button_group.pack(expand=True)
         
@@ -1742,7 +1795,7 @@ class GamePage(tk.Frame):
             fg='white',
             padx=12,
             pady=6,
-            command=on_try_again
+            command=try_again_clicked
         ).pack(side='left', padx=10)
         
         tk.Button(
@@ -1753,7 +1806,7 @@ class GamePage(tk.Frame):
             fg='white',
             padx=12,
             pady=6,
-            command=on_back_menu
+            command=back_to_map_clicked
         ).pack(side='left', padx=10)
         
         tk.Button(
@@ -1764,10 +1817,10 @@ class GamePage(tk.Frame):
             fg='white',
             padx=12,
             pady=6,
-            command=on_leaderboard
+            command=show_leaderboard_clicked
         ).pack(side='left', padx=10)
         
-        # Add Review Questions button if there are wrong questions
+        # add review button if you got some wrong
         if self.wrong_questions:
             tk.Button(
                 button_group,
@@ -1780,47 +1833,47 @@ class GamePage(tk.Frame):
                 command=self.show_questions_summary
             ).pack(side='left', padx=10)
         
-        # 等待用户选择
+        # wait for user to pick something
         dialog.wait_window()
         result = choice_var.get()
         
         if result == "try_again":
-            # 直接重新开始相同难度的游戏
+            # start the same difficulty again
             self.reset_game()
             self.controller.show_frame('GamePage')
         elif result == "leaderboard":
-            # 显示排行榜
+            # show the leaderboard
             self.save_and_show_leaderboard()
         elif result == "back_menu":
-            # 返回地图页面，保持玩家信息
+            # go back to map page, keep player info
             self.reset_game()
             self.controller.show_frame('PlayerInfoMapPage')
-        else:  # 默认返回菜单
-            # 返回菜单并重置玩家信息
+        else:  # default to menu
+            # go back to menu and reset player info
             self.reset_game()
             player_info_page = self.controller.page_frames['PlayerInfoMapPage']
             player_info_page.reset_player_info()
             self.controller.show_frame('PlayerInfoMapPage')
     
     def _get_leaderboard_info(self, player_name, score):
-        """Get leaderboard ranking information for the player"""
+        """figure out where the player ranks on the leaderboard"""
         try:
             from utils import ScoreManager
             score_manager = ScoreManager()
             high_scores = score_manager.get_records()
             
-            # Find player's rank for current score
+            # look for player's rank with current score
             player_rank = None
             player_on_leaderboard = False
             
-            # Check if player is on leaderboard with current score
+            # see if player is on leaderboard with this score
             for i, score_entry in enumerate(high_scores, 1):
                 if score_entry.get('player') == player_name and score_entry.get('score') == score:
                     player_rank = i
                     player_on_leaderboard = True
                     break
             
-            # If not found with current score, check if player exists on leaderboard with different score
+            # if not found with current score, check if player exists with different score
             if not player_on_leaderboard:
                 for score_entry in high_scores:
                     if score_entry.get('player') == player_name:
@@ -1828,7 +1881,7 @@ class GamePage(tk.Frame):
                         break
             
             if player_rank:
-                # Player is on leaderboard with current score
+                # player is on leaderboard with current score
                 if player_rank == 1:
                     return f"🏆 {player_name}, you're #1 on the leaderboard! Check the leaderboard to see your achievement!", '#FFD700'
                 elif player_rank == 2:
@@ -1838,10 +1891,10 @@ class GamePage(tk.Frame):
                 else:
                     return f"📊 {player_name}, you're #{player_rank} on the leaderboard! Check the leaderboard to see your position!", '#006994'
             elif player_on_leaderboard:
-                # Player is on leaderboard but with a different (higher) score
+                # player is on leaderboard but with a different (higher) score
                 return f"📊 {player_name}, you're already on the leaderboard! Check the leaderboard to see your best score!", '#228B22'
             else:
-                # Player is not on leaderboard at all
+                # player is not on leaderboard at all
                 if len(high_scores) > 0:
                     lowest_score = min(score_entry.get('score', 0) for score_entry in high_scores)
                     if score < lowest_score:
@@ -1854,18 +1907,18 @@ class GamePage(tk.Frame):
             return f"📊 {player_name}, check the leaderboard to see how you rank!", '#006994'
 
     def show_questions_summary(self):
-        """Show wrong questions summary in a separate window"""
+        """show wrong questions in a separate window"""
         if not self.wrong_questions:
             return
         
-        # Create a new window for questions summary
+        # make a new window for the summary
         summary_window = tk.Toplevel()
         summary_window.title("📝 Questions Summary - Review Your Mistakes")
         summary_window.geometry("900x600")
         summary_window.configure(bg='#E8F4FD')
         summary_window.resizable(True, True)
         
-        # Center the window
+        # put it in the center of screen
         screen_width = summary_window.winfo_screenwidth()
         screen_height = summary_window.winfo_screenheight()
         x = (screen_width - 900) // 2
@@ -1875,15 +1928,15 @@ class GamePage(tk.Frame):
         summary_window.transient(self)
         summary_window.grab_set()
         
-        # Main frame
+        # main container
         main_frame = tk.Frame(summary_window, bg='#E8F4FD')
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        # Header
+        # header area
         header_frame = tk.Frame(main_frame, bg='#E8F4FD')
         header_frame.pack(fill='x', pady=(0, 15))
         
-        # Title with decorative border
+        # fancy border around title
         title_border = tk.Frame(header_frame, bg='#FF6B6B', bd=3, relief='raised')
         title_border.pack(fill='x', pady=(0, 15))
         
@@ -1907,7 +1960,7 @@ class GamePage(tk.Frame):
             wraplength=800
         ).pack(pady=5)
         
-        # Statistics
+        # show performance stats
         wrong_count = len(self.wrong_questions)
         total_questions = QUESTIONS_PER_GAME
         correct_count = total_questions - wrong_count
@@ -1927,11 +1980,11 @@ class GamePage(tk.Frame):
             fg='#006994'
         ).pack(pady=5)
         
-        # Questions display area
+        # area to show the questions
         questions_frame = tk.Frame(main_frame, bg='#E8F4FD')
         questions_frame.pack(fill='both', expand=True)
         
-        # Create scrollable canvas for questions
+        # make a scrollable area for the questions
         canvas = tk.Canvas(questions_frame, bg='#E8F4FD', highlightthickness=0)
         scrollbar = tk.Scrollbar(questions_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='#E8F4FD')
@@ -1944,32 +1997,32 @@ class GamePage(tk.Frame):
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
-        # Mouse wheel scrolling
-        def _on_mousewheel(event):
+        # make mouse wheel work for scrolling
+        def scroll_with_mouse(event):
             try:
                 canvas.yview_scroll(int(-1*(event.delta/120)), "units")
             except tk.TclError:
-                # Canvas was destroyed, ignore the error
+                # canvas was destroyed, ignore the error
                 pass
         
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<MouseWheel>", scroll_with_mouse)
         
-        # Clean up binding when window is destroyed
-        def on_window_destroy():
+        # clean up when window closes
+        def close_window_properly():
             try:
                 canvas.unbind_all("<MouseWheel>")
             except:
                 pass
         
-        summary_window.protocol("WM_DELETE_WINDOW", on_window_destroy)
+        summary_window.protocol("WM_DELETE_WINDOW", close_window_properly)
         
-        # Display each wrong question
+        # show each wrong question
         for i, wrong_q in enumerate(self.wrong_questions, 1):
-            # Question container with border
+            # put each question in its own box
             question_frame = tk.Frame(scrollable_frame, bg='#FFE4E1', bd=2, relief='raised')
             question_frame.pack(fill='x', pady=5, padx=5)
             
-            # Question number and text
+            # question number and the actual question
             tk.Label(
                 question_frame,
                 text=f"Question #{wrong_q['question_number']}",
@@ -1988,7 +2041,7 @@ class GamePage(tk.Frame):
                 justify='left'
             ).pack(anchor='w', padx=10, pady=5)
             
-            # User answer and correct answer
+            # what you said vs what was right
             answer_frame = tk.Frame(question_frame, bg='#FFE4E1')
             answer_frame.pack(anchor='w', padx=10, pady=5, fill='x')
             
@@ -2024,11 +2077,11 @@ class GamePage(tk.Frame):
                 pady=3
             ).pack(side='left')
         
-        # Layout scrollable area
+        # put the scrollable area together
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Close button
+        # close button
         button_frame = tk.Frame(main_frame, bg='#E8F4FD')
         button_frame.pack(fill='x', pady=(15, 0))
         
@@ -2050,6 +2103,6 @@ class GamePage(tk.Frame):
             command=close_window
         ).pack()
         
-        # Focus on the window
+        # make sure window gets focus
         summary_window.focus_set()
         summary_window.wait_window()
